@@ -1,0 +1,12 @@
+{
+    "client": "Thunder Client",
+    "environmentName": "Develop",
+    "dateExported": "2023-12-04T20:24:03.319Z",
+    "version": "1.0",
+    "variables": [
+        {
+            "name": "accessToken",
+            "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzAxNjI1MTI0LCJpYXQiOjE3MDE2MjE1MjQsImp0aSI6IjI1MjRkNzlhODhiZTRlYTNiNThkNjQxN2Y0YTMyNmM1IiwidXNlcl9pZCI6M30.5hLoSBbtzWxjt9rD_svOxXyOat2dh_6MDbX031HVzjQ"
+        }
+    ]
+}
