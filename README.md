@@ -226,3 +226,8 @@ REQUIRED_FIELDS = ['username','first_name', 'last_name']
 
 ##### crear aplicacion comments
 ```django-admin startapp comments```
+
+
+## Produccion 
+* generar archivo requirements.txt
+```pip freeze > requirements.txt```
