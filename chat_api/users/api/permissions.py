@@ -3,7 +3,7 @@ from rest_framework.permissions import BasePermission
 class IsOwner(BasePermission):
     def has_object_permission(self, request, view, obj):
         # Verificar si la solicitud es para editar o eliminar un objeto
-        if request.method in ['PUT', 'DELETE']:
+        if request.method in ['PUT','PATCH', 'DELETE']:
             # Obtener el usuario autenticado
             user = request.user
             

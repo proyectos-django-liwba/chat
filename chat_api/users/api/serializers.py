@@ -33,7 +33,12 @@ class UserUpdateSerializer(serializers.ModelSerializer):
   class Meta:
       model = User
       fields = ['email','avatar', 'username','first_name', 'last_name']
-      
+
+class UserUpdatePathSerializer(serializers.ModelSerializer):
+  class Meta:
+      model = User
+      fields = ['id', 'avatar', 'email','username', 'first_name', 'last_name', 'role']
+        
 # Serializador para actualizar solo la contraseña
 class UserChangePasswordSerializer(serializers.ModelSerializer):
     old_password = serializers.CharField(write_only=True, required=True)

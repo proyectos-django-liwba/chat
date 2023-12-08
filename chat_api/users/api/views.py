@@ -8,6 +8,7 @@ from users.api.serializers import (
   UserUpdateSerializer,
   UserChangePasswordSerializer,
   VerificarCuentaSerializer,
+  UserUpdatePathSerializer,
 )
 from users.utils.email import enviar_correo_verificacion
 from django.shortcuts import redirect
@@ -96,9 +97,47 @@ class UserView(APIView):
   permission_classes = [IsOwner]
   
   #definir que petición se puede hacer a este endpoint
-  http_method_names = ['put', 'delete']
+  http_method_names = ['put', 'patch', 'delete']
+  
+    # actualizar usuario autenticado
+  def patch(self, request, *args, **kwargs):
+        try:
+            user_id = kwargs.get('pk')
+      
+            # Obtener el usuario autenticado
+            user = User.objects.get(id=request.user.id)
 
-  # actualizar usuario autenticado
+            # Verificar si el usuario autenticado tiene permisos para actualizar este usuario
+            self.check_object_permissions(request, user)
+
+            # Obtener el nuevo avatar del request
+            new_avatar = request.data.get('avatar', None)
+
+            # Validar que el nuevo avatar no sea nulo
+            if new_avatar is not None:
+                # Actualizar solo el campo 'avatar'
+                user.avatar = new_avatar
+                user.save()
+
+                # Serializar y devolver la respuesta
+                serializer = UserUpdatePathSerializer(user)
+                return Response(
+                    {"message": "Avatar actualizado correctamente", "user": serializer.data},
+                    status=status.HTTP_200_OK
+                )
+            else:
+                return Response(
+                    {"error": "El campo 'avatar' no puede ser nulo."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        except Exception as e:
+            return Response(
+                {"error": f"No se pudo actualizar el avatar: {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+
   def put(self, request, *args, **kwargs):
     try:
       # Obtener el ID del usuario que se va a actualizar desde los parámetros de la URL
@@ -152,6 +191,9 @@ class UserView(APIView):
         return Response(status=status.HTTP_404_NOT_FOUND, data={"error": "Usuario no encontrado"})
     except Exception as e:
         return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": "No se pudo desactivar el usuario"})
+    
+    
+    
 
 # falta revisar estos endpoints y crear los del admin         
 class UserChangePasswordView(APIView):
