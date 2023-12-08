@@ -18,6 +18,7 @@ class User(AbstractUser):
         choices=ROLE_CHOICES, 
         default=USER
     )
+    avatar = models.IntegerField(default=1)
 
     #TODO permisos
     #? Admin

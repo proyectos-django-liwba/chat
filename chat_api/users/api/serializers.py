@@ -5,7 +5,7 @@ from users.models import User
 class UserRegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['email','username','password','first_name', 'last_name', 'role']
+        fields = ['email','avatar', 'username','password','first_name', 'last_name', 'role']
    
     def create(self, validated_data):
       # encriptar el password
@@ -23,14 +23,14 @@ class UserRegisterSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
   class Meta:
       model = User
-      fields = ['id','email','username', 'first_name', 'last_name', 'role']
+      fields = ['id', 'avatar', 'email','username', 'first_name', 'last_name', 'role']
 
 
 # Serializador para el modelo User, actualización de usuarios
 class UserUpdateSerializer(serializers.ModelSerializer):
   class Meta:
       model = User
-      fields = ['email','username','first_name', 'last_name']
+      fields = ['email','avatar', 'username','first_name', 'last_name']
       
 # Serializador para actualizar solo la contraseña
 class UserChangePasswordSerializer(serializers.ModelSerializer):
