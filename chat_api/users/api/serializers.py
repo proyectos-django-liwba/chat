@@ -3,9 +3,11 @@ from users.models import User
 
 # Serializador para registro de usuarios
 class UserRegisterSerializer(serializers.ModelSerializer):
+    first_name = serializers.CharField(required=True)
+    last_name = serializers.CharField(required=True)
     class Meta:
         model = User
-        fields = ['email','avatar', 'username','password','first_name', 'last_name', 'role']
+        fields = [ 'email','avatar', 'username','password','first_name', 'last_name', 'role']
    
     def create(self, validated_data):
       # encriptar el password

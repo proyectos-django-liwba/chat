@@ -9,6 +9,7 @@ from users.api.serializers import (
   UserChangePasswordSerializer,
   VerificarCuentaSerializer,
 )
+from users.utils.email import enviar_correo_verificacion
 from django.shortcuts import redirect
 import jwt
 from django.conf import settings
@@ -19,10 +20,11 @@ from rest_framework_simplejwt.tokens import AccessToken
 from users.api.permissions import IsOwner
 from rest_framework.exceptions import PermissionDenied
 
+
 class CustomTokenObtainPairView(TokenObtainPairView):
-    #definir que petición se puede hacer a este endpoint
+    # Definir que petición se puede hacer a este endpoint
     http_method_names = ['post']
-    
+
     def post(self, request, *args, **kwargs):
         try:
             # Ejecutar el método post de la clase padre
@@ -32,19 +34,31 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                 # Obtener el ID del usuario desde el token de acceso
                 access_token = response.data.get('access')
                 user_id = AccessToken(access_token).get('user_id')
+
                 # Obtener el usuario utilizando el ID
                 user = User.objects.get(id=user_id)
+
+                # Verificar si el usuario está verificado
+                if not user.is_verified:
+                    return Response(
+                        {"error": "El usuario no está verificado."},
+                        status=status.HTTP_401_UNAUTHORIZED
+                    )
 
                 # Serializar y agregar los detalles del usuario a la respuesta del token
                 user_serializer = UserSerializer(user)
                 user_data = user_serializer.data
 
                 # Crear un nuevo diccionario de respuesta con el orden deseado
-                new_response_data = {'user': user_data, 'access': response.data['access'], 'refresh': response.data['refresh']}
-                
+                new_response_data = {
+                    'user': user_data,
+                    'access': response.data['access'],
+                    'refresh': response.data['refresh']
+                }
+
                 # Devolver la respuesta con el nuevo orden
                 return Response(new_response_data, status=response.status_code)
-              
+
         except Exception as e:
             # Personalizar la respuesta en caso de un error
             return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": "Ocurrió un error al verificar las credenciales"})
@@ -52,25 +66,29 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         # Si no hay un error y la respuesta es exitosa, devolver la respuesta original
         return response
 
-
 class RegisterView(APIView):
-    #definir que petición se puede hacer a este endpoint
+    # Definir que petición se puede hacer a este endpoint
     http_method_names = ['post']
 
-    #endpoint para registrar usuarios
-    def post(self,  request, *args, **kwargs):
-        # leer los datos del request
+    # Endpoint para registrar usuarios
+    def post(self, request, *args, **kwargs):
+        # Leer los datos del request
         serializer = UserRegisterSerializer(data=request.data)
-        
-        # validar los datos
+
+        # Validar los datos
         if serializer.is_valid(raise_exception=True):
-          # guardar
-          serializer.save()
-          # respuesta en caso de exito
-          return Response(status=status.HTTP_201_CREATED, data={"message":"Usuario creado correctamente"})
-        
-        # respuesta en caso de error
-        return Response(status=status.HTTP_400_BAD_REQUEST, data={"error":serializer.errors, "message":"No se pudo crear el usuario"})
+            # Envía el correo de verificación
+            if enviar_correo_verificacion(serializer):
+                # Guardar el usuario solo si el correo se envía correctamente
+                serializer.save()
+                # Respuesta en caso de éxito
+                return Response(status=status.HTTP_201_CREATED, data={"message": "Usuario creado correctamente"})
+
+            # Respuesta en caso de error al enviar el correo
+            return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR, data={"error": "Ocurrio un error al enviar el correo de verificación, verifica el correo electronico"})
+
+        # Respuesta en caso de error de validación
+        return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": serializer.errors, "message": "No se pudo crear el usuario"})
 
   
 class UserView(APIView):
