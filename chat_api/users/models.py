@@ -13,6 +13,7 @@ class User(AbstractUser):
     email = models.EmailField(unique=True)
     is_verified = models.BooleanField(default=False)
     otp = models.CharField(max_length=255, null=True, blank=True)
+    is_active = models.BooleanField(default=True)
     role = models.CharField(
         max_length=10,
         choices=ROLE_CHOICES, 
