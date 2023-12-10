@@ -74,19 +74,6 @@ class RoomParticipateApiView(APIView):
     permission_classes = [IsAuthenticated]
     http_method_names = ['put', 'patch', 'delete', 'post']
 
-    def leave_room(self, request, room_id):
-        room = get_object_or_404(Room, id=room_id)
-        user = request.user
-
-        # Verificar si el usuario es un participante en la sala
-        if room.users.filter(id=user.id).exists():
-            # Remover al usuario de la sala
-            room.users.remove(user)
-            return Response({"detail": "Te has salido de la sala."}, status=status.HTTP_200_OK)
-        else:
-            return Response({"detail": "No eres un participante en esta sala."}, status=status.HTTP_400_BAD_REQUEST)
-    
-    
     def post(self, request, room_id):  # Ajusta el nombre del argumento a 'room_id'
         try:
             room = Room.objects.get(id=room_id)
@@ -114,3 +101,19 @@ class getRooms(APIView):
         rooms = Room.objects.all()
         serializer = RoomSerializer(rooms, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+    
+class LeaveRoomAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, room_id):
+        room = get_object_or_404(Room, id=room_id)
+        user = request.user
+
+        # Verificar si el usuario es un participante en la sala
+        if room.users.filter(id=user.id).exists():
+            # Remover al usuario de la sala
+            room.users.remove(user)
+            serializer = RoomSerializer(room)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response({"detail": "No eres un participante en esta sala."}, status=status.HTTP_400_BAD_REQUEST)
