@@ -104,3 +104,13 @@ class RoomParticipateApiView(APIView):
                 return Response({"message": "Ya eres un participante en esta sala."}, status=status.HTTP_400_BAD_REQUEST)
         else:
             return Response({"message": "No puedes unirte a tu propia sala o como administrador."}, status=status.HTTP_403_FORBIDDEN)
+        
+        
+class getRooms(APIView):
+    permission_classes = [IsAuthenticated]
+    http_method_names = ['get']
+    
+    def get(self, request):
+        rooms = Room.objects.all()
+        serializer = RoomSerializer(rooms, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
