@@ -6,6 +6,9 @@ from rooms.api.serializers import RoomSerializer, registerRoomSerializer
 from rooms.api.permissions import RoomPermission
 from rooms.models import Room
 from django.shortcuts import get_object_or_404
+from rest_framework.permissions import IsAuthenticated
+from django.db.models.deletion import ProtectedError
+from django.http import Http404
 
 class RegisterView(APIView):
     permission_classes = [IsAuthenticated]
@@ -52,31 +55,24 @@ class RoomApiView(APIView):
         else:
             return Response({"message": "No tienes permisos para actualizar esta sala."}, status=status.HTTP_403_FORBIDDEN)
 
-    def patch(self, request, room_id):
-        room = get_object_or_404(Room, id=room_id)
-        serializer = RoomSerializer(room, data=request.data, partial=True)
-
-        if serializer.is_valid():
-            serializer.save()
-            return Response(status=status.HTTP_200_OK, data={"message": "Sala actualizada correctamente"})
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, room_id):
         room = get_object_or_404(Room, id=room_id)
-        
+
         if request.user == room.user or request.user.role == 'Admin':
             try:
                 room.delete()
                 return Response({"message": "La sala se eliminó con éxito."}, status=status.HTTP_200_OK)
+            except ProtectedError:
+                return Response({"message": "No puedes eliminar la sala porque tiene participantes."}, status=status.HTTP_400_BAD_REQUEST)
             except Exception as e:
-                return Response({"message": f"Error al eliminar la sala: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"message": f"Error al eliminar la sala: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         else:
             return Response({"message": "No tienes permisos para eliminar esta sala."}, status=status.HTTP_403_FORBIDDEN)
 
 class RoomParticipateApiView(APIView):
-    permission_classes = [RoomPermission]
-    http_method_names = ['put', 'patch', 'delete']
+    permission_classes = [IsAuthenticated]
+    http_method_names = ['put', 'patch', 'delete', 'post']
 
     def leave_room(self, request, room_id):
         room = get_object_or_404(Room, id=room_id)
@@ -89,3 +85,22 @@ class RoomParticipateApiView(APIView):
             return Response({"detail": "Te has salido de la sala."}, status=status.HTTP_200_OK)
         else:
             return Response({"detail": "No eres un participante en esta sala."}, status=status.HTTP_400_BAD_REQUEST)
+    
+    
+    def post(self, request, room_id):  # Ajusta el nombre del argumento a 'room_id'
+        try:
+            room = Room.objects.get(id=room_id)
+        except Room.DoesNotExist:
+            raise Http404("La sala no existe.")
+
+        # Verificar si el usuario no es el propietario y no es un administrador
+        if request.user != room.user and request.user.role != 'Admin':
+            # Verificar si el usuario ya es un participante en la sala
+            if not room.users.filter(id=request.user.id).exists():
+                # Agregar al usuario como participante
+                room.users.add(request.user)
+                return Response({"message": "Te has unido a la sala correctamente."}, status=status.HTTP_200_OK)
+            else:
+                return Response({"message": "Ya eres un participante en esta sala."}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({"message": "No puedes unirte a tu propia sala o como administrador."}, status=status.HTTP_403_FORBIDDEN)
