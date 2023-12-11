@@ -4,6 +4,9 @@ from pathlib import Path
 import pymysql
 # libreria para configurar expiracion de token
 import datetime
+# libreria para sistema operativo
+import sys
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -24,6 +27,9 @@ SECRET_KEY = 'django-insecure-&xu(ytj6b^r-6w07ryt%l&dil(y1hfgve+m-dni%$@$o#%_%9n
 DEBUG = True
 
 ALLOWED_HOSTS = []
+
+# no escribir archivos py cache
+sys.dont_write_bytecode = True
 
 
 # Application definition

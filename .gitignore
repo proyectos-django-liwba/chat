@@ -14,3 +14,9 @@ db.sqlite3
 
 # Carpeta de archivos temporales
 /tmp/
+
+# Ignorar archivos pycache en cualquier nivel dentro de /chat_api/
+/chat_api/**/__pycache__/
+
+# Ignorar archivos pyc en cualquier nivel dentro de /chat_api/
+/chat_api/**/*.pyc
