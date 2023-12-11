@@ -6,7 +6,7 @@ import pymysql
 import datetime
 # libreria para sistema operativo
 import sys
-
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -67,7 +67,7 @@ ROOT_URLCONF = 'chat_api.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'chat_api', 'users', 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -79,6 +79,7 @@ TEMPLATES = [
         },
     },
 ]
+
 
 WSGI_APPLICATION = 'chat_api.wsgi.application'
 ASGI_APPLICATION = 'chat_api.asgi.application'
@@ -188,3 +189,5 @@ EMAIL_HOST_USER ='practicaprograuniversidad@gmail.com'
 EMAIL_HOST_PASSWORD = 'igjg nqqq iidr xqge'
 EMAIL_TIMEOUT = 300
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
+ACTIVATION_URL = 'http://localhost:5173/login/{token}/'

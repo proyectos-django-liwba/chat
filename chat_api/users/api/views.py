@@ -1,7 +1,7 @@
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from users.api.serializers import (
   UserRegisterSerializer,
   UserSerializer, 
@@ -10,7 +10,7 @@ from users.api.serializers import (
   VerificarCuentaSerializer,
   UserUpdatePathSerializer,
 )
-from users.utils.email import enviar_correo_verificacion
+from django.template.loader import render_to_string
 from django.shortcuts import redirect
 import jwt
 from django.conf import settings
@@ -20,8 +20,18 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import AccessToken
 from users.api.permissions import IsOwner
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.authentication import SessionAuthentication, BasicAuthentication
+from django.core.mail import send_mail, get_connection
+from django.conf import settings
+from users.models import User
+import jwt
+import logging
+from datetime import datetime, timedelta
+from rest_framework import serializers
+from django.template import Context
 
 
+logger = logging.getLogger(__name__)
 class CustomTokenObtainPairView(TokenObtainPairView):
     # Definir que petición se puede hacer a este endpoint
     http_method_names = ['post']
@@ -68,30 +78,80 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         return response
 
 class RegisterView(APIView):
-    # Definir que petición se puede hacer a este endpoint
+    authentication_classes = []
+    permission_classes = [AllowAny]
     http_method_names = ['post']
 
-    # Endpoint para registrar usuarios
-    def post(self, request, *args, **kwargs):
-        # Leer los datos del request
-        serializer = UserRegisterSerializer(data=request.data)
+class RegisterView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+    http_method_names = ['post']
 
-        # Validar los datos
-        if serializer.is_valid(raise_exception=True):
-            # Envía el correo de verificación
-            if enviar_correo_verificacion(serializer):
-                # Guardar el usuario solo si el correo se envía correctamente
-                serializer.save()
+    def post(self, request, *args, **kwargs):
+        try:
+            # Leer los datos del request
+            serializer = UserRegisterSerializer(data=request.data)
+
+            # Validar los datos
+            if serializer.is_valid(raise_exception=True):
+                # Obtener y eliminar la contraseña del diccionario de datos
+                password = serializer.validated_data.get('password')
+                del serializer.validated_data['password']
+
+                # Crear la instancia del usuario sin la contraseña
+                user = User(**serializer.validated_data)
+
+                # Validar y establecer la contraseña
+                if password:
+                    user.set_password(password)
+
+                # Guardar el usuario
+                user.save()
+
+                # Generar el token JWT
+                payload = {
+                    'user': user.first_name,
+                    'exp': datetime.utcnow() + timedelta(days=3)
+                }
+                token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
+
+                # Guardar el token en el campo 'otp' del usuario
+                user.otp = token
+                user.save()
+
+                # Construir el enlace de activación
+                activation_link = settings.ACTIVATION_URL.format(token=token)
+
+
+                # Mensaje del correo
+                message = render_to_string('Email.html', {'user': user, 'activation_link': activation_link})
+
+                # Enviar el correo
+                send_mail(
+                    'Verificar cuenta',
+                    message,
+                    get_connection(username=True).username,
+                    [user.email],
+                    fail_silently=False,
+                    html_message=message,
+                )
+
                 # Respuesta en caso de éxito
                 return Response(status=status.HTTP_201_CREATED, data={"message": "Usuario creado correctamente"})
 
-            # Respuesta en caso de error al enviar el correo
-            return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR, data={"error": "Ocurrio un error al enviar el correo de verificación, verifica el correo electronico"})
+        except serializers.ValidationError as validation_error:
+            # Manejar errores de validación
+            return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": str(validation_error)})
 
-        # Respuesta en caso de error de validación
-        return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": serializer.errors, "message": "No se pudo crear el usuario"})
+        except Exception as e:
+            # Loguea el error
+            user.delete()
+            logger.error(f"Error al registrar usuario: {e}")
 
-  
+        # Respuesta en caso de error
+        return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR, data={"error": "Ocurrió un error al crear el usuario"})
+    
+    
 class UserView(APIView):
   # seguridad para el endpoint, solo usuarios autenticados
   permission_classes = [IsOwner]
