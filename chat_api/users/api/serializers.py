@@ -64,8 +64,10 @@ class UserChangePasswordSerializer(serializers.ModelSerializer):
 
 class VerificarCuentaSerializer(serializers.Serializer):
     
-    email = serializers.EmailField()
     otp = serializers.CharField()
+    class Meta:
+      model = User
+      fields = ['id', 'avatar', 'email','username', 'first_name', 'last_name', 'role', 'otp', 'is_verified']
 
 
 class UserSerializerUsername(serializers.ModelSerializer):

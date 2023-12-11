@@ -20,7 +20,6 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import AccessToken
 from users.api.permissions import IsOwner
 from rest_framework.exceptions import PermissionDenied
-from rest_framework.authentication import SessionAuthentication, BasicAuthentication
 from django.core.mail import send_mail, get_connection
 from django.conf import settings
 from users.models import User
@@ -28,8 +27,7 @@ import jwt
 import logging
 from datetime import datetime, timedelta
 from rest_framework import serializers
-from django.template import Context
-
+from django.contrib.auth import get_user_model
 
 logger = logging.getLogger(__name__)
 class CustomTokenObtainPairView(TokenObtainPairView):
@@ -77,10 +75,6 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         # Si no hay un error y la respuesta es exitosa, devolver la respuesta original
         return response
 
-class RegisterView(APIView):
-    authentication_classes = []
-    permission_classes = [AllowAny]
-    http_method_names = ['post']
 
 class RegisterView(APIView):
     authentication_classes = []
@@ -110,7 +104,7 @@ class RegisterView(APIView):
 
                 # Generar el token JWT
                 payload = {
-                    'user': user.first_name,
+                    'user_id': user.id,
                     'exp': datetime.utcnow() + timedelta(days=3)
                 }
                 token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
@@ -141,7 +135,13 @@ class RegisterView(APIView):
 
         except serializers.ValidationError as validation_error:
             # Manejar errores de validación
-            return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": str(validation_error)})
+            error_messages = {"message": []}
+            
+            for field, errors in validation_error.detail.items():
+                error_messages["message"].extend([str(error) for error in errors])
+            
+            return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": error_messages})
+
 
         except Exception as e:
             # Loguea el error
@@ -281,70 +281,49 @@ class UserChangePasswordView(APIView):
     except Exception as e:
       return Response(status=status.HTTP_400_BAD_REQUEST, data={"error":serializer.errors, "message":"No se pudo actualizar la contraseña"}) 
     return response
-  
-class VerificarOTP(APIView):
-  def post(self, request):
-      try:
-          data = request.data
-          serializers = VerificarCuentaSerializer(data = data)
-          
-          if serializers.is_valid():
-              email = serializers.data['email']
-              otp = serializers.data['otp']
-              
-              user = User.objects.filter(email = email)
-              if not user.exists():
-                  return Response({
-                      'status': 400,
-                      'message': 'correo no encontrado',
-                      'data': 'correo invalido'
-                      })
-              
-              if user[0].otp != otp:
 
-                  return Response({
-                      'status': 200,
-                      'message': 'Algo salio mal',
-                      'data': 'Codigo invalido'
-                      })
-              
-              user = user.first()
-              user.esta_verificado = True
-              user.save()
-              
-              return Response({
-                  'status': 200,
-                  'message': 'Usuario verificado',
-                  'data': 'Usuario verificado'
-                  })
-          
-          return Response({
-              'status': 400,
-              'message': 'Algo salio mal',
-              'data': serializers.errors
-              })  
-      
-      except Exception as e:
-          print(e)
 
-class AccountActivationView(APIView):
-    def get(self, request, token):
+class VerificarCuentaView(APIView):
+    def post(self, request):
         try:
-            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
-            user_id = payload['user_id']
-            user = User.objects.get(id=user_id)
+            data = request.data
+            serializer = VerificarCuentaSerializer(data=data)
 
-            # Activa la cuenta o realiza otras acciones según tus necesidades
-            user.is_active = True
-            user.save()
+            if serializer.is_valid():
+                # Aquí asumimos que el token contiene información necesaria, como el ID del usuario o el correo electrónico
+                token = serializer.data['otp']
+                
+                # Decodificar el token para obtener la información
+                payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
 
-            # Redirige a la URL de éxito después de la activación
-            return redirect('https://tu-sitio.com/exito_activacion')
+                # Obtener el ID de usuario del payload
+                user_id = payload.get('user_id')
+                
+
+                # Obtener el usuario y activarlo
+                user = get_user_model().objects.get(pk=user_id)
+                print(user)
+
+                user.is_verified = True
+                user.save()
+                print("Usuario guardado correctamente")
+
+                return Response({
+                    'status': 200,
+                    'message': 'Usuario verificado',
+                    'data': 'Usuario verificado'
+                })
+
+            return Response(status=status.HTTP_200_OK, data={"message": "Cuenta activada correctamente"})
+
         except jwt.ExpiredSignatureError:
-            return Response({'error': 'El token de activación ha expirado.'}, status=status.HTTP_400_BAD_REQUEST)
-        except jwt.InvalidTokenError:
-            return Response({'error': 'Token de activación no válido.'}, status=status.HTTP_400_BAD_REQUEST)
-        except User.DoesNotExist:
-            return Response({'error': 'Usuario no encontrado.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": "Token ha expirado"})
 
-      
+        except jwt.InvalidTokenError:
+            return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": "Token no válido"})
+
+        except get_user_model().DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND, data={"error": "Usuario no encontrado"})
+
+        except Exception as e:
+            return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR, data={"error": str(e)})     
