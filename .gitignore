@@ -1,1 +1,16 @@
-*.env
+# Archivos generados por el sistema operativo
+.DS_Store
+Thumbs.db
+
+# Directorios generados por Python
+__pycache__/
+.env
+
+# Archivos de logs
+*.log
+
+# Archivos de base de datos SQLite
+db.sqlite3
+
+# Carpeta de archivos temporales
+/tmp/
