@@ -1,16 +1,32 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" type="text/css" href="styles.css">
-    <title>Verificar cuenta</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Verificar cuenta</title>
 </head>
 <body>
-    <p>Hola {{ user.first_name }},</p>
-    <p>Tienes 3 días para activar tu cuenta. Si no lo haces, tu cuenta será eliminada.</p>
-    <p>Activa tu cuenta en el siguiente enlace:</p>
-    <a href="{{activation_link}}">Activar mi cuenta</a>
+  <header>
+    <img src="cid:logo" alt="Logotipo de la empresa" width="200px" height="100px">
+</header>
 
+
+  </header>
+
+  <main>
+    <h1 style="color: #333; font-size: 20px; margin-bottom: 20px;">Hola {{ user.first_name }},</h1>
+    <p style="color: #666; font-size: 16px;">Tienes 3 días para activar tu cuenta. Si no lo haces, tu cuenta será eliminada.</p>
+    <p style="color: #666; font-size: 16px;">Activa tu cuenta en el siguiente enlace:</p>
+    <a href="{{activation_link}}" style="background-color: #000; color: #fff; padding: 10px 20px; text-decoration: none;">Activar mi cuenta</a>
+  </main>
+
+  <footer>
+    <p style="color: #666; font-size: 16px;">Contacto: <a href="mailto:
+        practicaprograuniversidad@gmail.com">
+        practicaprograuniversidad@gmail.com</a></p>
+        <p style="color: #666; font-size: 16px;"> Este email es una notificación automática, por favor no
+            responda a este correo.</p>
+  </footer>
 </body>
 </html>

@@ -165,6 +165,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
 STATIC_URL = '/static/'
+
 STATIC_ROOT = './static/'
 
 # Default primary key field type
@@ -190,4 +191,4 @@ EMAIL_HOST_PASSWORD = 'igjg nqqq iidr xqge'
 EMAIL_TIMEOUT = 300
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
-ACTIVATION_URL = 'http://localhost:5173/login/{token}/'
+ACTIVATION_URL = 'http://localhost:5173/activate/{token}/'

@@ -2,6 +2,7 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
+import os
 from users.api.serializers import (
   UserRegisterSerializer,
   UserSerializer, 
@@ -10,6 +11,7 @@ from users.api.serializers import (
   VerificarCuentaSerializer,
   UserUpdatePathSerializer,
 )
+from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.shortcuts import redirect
 import jwt
@@ -116,22 +118,39 @@ class RegisterView(APIView):
                 # Construir el enlace de activación
                 activation_link = settings.ACTIVATION_URL.format(token=token)
 
+               
 
-                # Mensaje del correo
-                message = render_to_string('Email.html', {'user': user, 'activation_link': activation_link})
+                # Adjuntar el archivo si existe
+                email_attachment = None
+                try:
+                    email_attachment = open(os.path.join(settings.STATIC_ROOT, 'admin', 'img', 'logo.png'), 'rb').read()
+                except FileNotFoundError:
+                    email_attachment = None
 
-                # Enviar el correo
-                send_mail(
+                # Crear el objeto EmailMessage
+                email = EmailMultiAlternatives(
                     'Verificar cuenta',
-                    message,
+                    'Texto alternativo en caso de que el cliente de correo no admita HTML.',
                     get_connection(username=True).username,
                     [user.email],
-                    fail_silently=False,
-                    html_message=message,
                 )
+
+                # Adjuntar el archivo si existe
+                if email_attachment:
+                    email.attach("logo.png", email_attachment, "image/png")
+
+                
+                
+                html_message = render_to_string('Email.html', {'user': user, 'activation_link': activation_link})
+
+                # Adjuntar el cuerpo HTML
+                email.attach_alternative(html_message, "text/html")
+                # Enviar el correo
+                email.send(fail_silently=False)
 
                 # Respuesta en caso de éxito
                 return Response(status=status.HTTP_201_CREATED, data={"message": "Usuario creado correctamente"})
+
 
         except serializers.ValidationError as validation_error:
             # Manejar errores de validación
@@ -225,7 +244,7 @@ class UserView(APIView):
 
       
   # elimina usuario autenticado
-  def delete(self, request, *args, **kwargs):
+  def destroy(self, request, *args, **kwargs):
     try:
         user_id = kwargs.get('pk')
         user = User.objects.get(id=user_id)
@@ -237,11 +256,10 @@ class UserView(APIView):
         self.check_object_permissions(request, user_auth)
 
         # Cambiar el estado del usuario a inactivo en lugar de eliminarlo
-        user.is_active = False
-        user.save()
+        user.delete()
 
         return Response(
-            {"message": "Usuario desactivado correctamente"},
+            {"message": "Usuario eliminado correctamente"},
             status=status.HTTP_204_NO_CONTENT
         )
     except PermissionDenied as e:
@@ -306,15 +324,14 @@ class VerificarCuentaView(APIView):
 
                 user.is_verified = True
                 user.save()
-                print("Usuario guardado correctamente")
+                print("Usuario guardado correctamente!")
 
                 return Response({
                     'status': 200,
-                    'message': 'Usuario verificado',
-                    'data': 'Usuario verificado'
+                    'message': 'Usuario verificado correctamente!',
                 })
 
-            return Response(status=status.HTTP_200_OK, data={"message": "Cuenta activada correctamente"})
+            return Response(status=status.HTTP_200_OK, data={"message": "Cuenta activada correctamente!"})
 
         except jwt.ExpiredSignatureError:
             return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": "Token ha expirado"})
