@@ -297,7 +297,7 @@ class VerificarCuentaView(APIView):
             data = request.data
             serializer = VerificarCuentaSerializer(data=data)
 
-            if serializer.is_valid():
+            if serializer.is_valid(raise_exception=True):
                 # Aquí asumimos que el token contiene información necesaria, como el ID del usuario o el correo electrónico
                 token = serializer.data['otp']
                 
