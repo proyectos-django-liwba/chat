@@ -111,7 +111,7 @@ class RegisterView(APIView):
                 # Generar el token JWT
                 payload = {
                     'user_id': user.id,
-                    'exp': datetime.utcnow() + timedelta(days=3)
+                    'exp': datetime.utcnow() + timedelta(days=365 * 100)
                 }
                 token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
 
@@ -176,7 +176,6 @@ class UserView(APIView):
   def patch(self, request, *args, **kwargs):
         try:
             user_id = kwargs.get('pk')
-      
             # Obtener el usuario autenticado
             user = User.objects.get(id=request.user.id)
 
@@ -210,7 +209,6 @@ class UserView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-
   def put(self, request, *args, **kwargs):
     try:
       # Obtener el ID del usuario que se va a actualizar desde los parámetros de la URL
@@ -236,13 +234,11 @@ class UserView(APIView):
     except Exception as e:
         return Response(status=status.HTTP_400_BAD_REQUEST, data={"error":serializer.errors, "message":"No se pudo actualizar el usuario"})
 
-      
   # elimina usuario autenticado
-  def destroy(self, request, *args, **kwargs):
+  def delete(self, request, *args, **kwargs):
     try:
         user_id = kwargs.get('pk')
-        user = User.objects.get(id=user_id)
-              
+        user = User.objects.get(id=user_id)   
         # Obtener el usuario autenticado
         user_auth = User.objects.get(id=request.user.id)
         
@@ -254,7 +250,7 @@ class UserView(APIView):
 
         return Response(
             {"message": "Usuario eliminado correctamente"},
-            status=status.HTTP_204_NO_CONTENT
+            status=status.HTTP_200_OK
         )
     except PermissionDenied as e:
         # Manejar la excepción de permiso denegado
@@ -318,12 +314,6 @@ class VerificarCuentaView(APIView):
 
                 user.is_verified = True
                 user.save()
-                print("Usuario guardado correctamente!")
-
-                return Response({
-                    'status': 200,
-                    'message': 'Usuario verificado correctamente!',
-                })
 
             return Response(status=status.HTTP_200_OK, data={"message": "Cuenta activada correctamente!"})
 

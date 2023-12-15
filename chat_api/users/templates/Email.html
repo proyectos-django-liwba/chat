@@ -8,25 +8,27 @@
 </head>
 <body>
   <header>
-    <img src="cid:logo_image" alt="Logotipo de la empresa" width="100px" height="100px">
+    <img src="cid:logo_image" style="border-radius: 16px; margin-left: 40px;" alt="Logotipo de la empresa" width="100px" height="100px">
 </header>
 
 
   </header>
 
   <main>
-    <h1 style="color: #333; font-size: 20px; margin-bottom: 20px;">Hola {{ user.first_name }},</h1>
-    <p style="color: #666; font-size: 16px;">Tienes 3 días para activar tu cuenta. Si no lo haces, tu cuenta será eliminada.</p>
-    <p style="color: #666; font-size: 16px;">Activa tu cuenta en el siguiente enlace:</p>
-    <a href="{{activation_link}}" style="background-color: #000; color: #fff; padding: 10px 20px; text-decoration: none;">Activar mi cuenta</a>
-  </main>
-
-  <footer>
-    <p style="color: #666; font-size: 16px;">Contacto: <a href="mailto:
+      <h1 style="color: #333; font-size: 20px; margin-bottom: 20px;">¡Bienvenido {{user.first_name}} a Chat App!</h1>
+      <p style="color: #666; font-size: 16px;">Para completar tu registro, debes activar tu cuenta.</p>
+      <p style="color: #666; font-size: 16px;">Tienes 3 días para hacerlo. Si no lo haces, tu cuenta será eliminada.</p>
+      <p style="color: #666; font-size: 16px;">Activa tu cuenta en el siguiente enlace:</p>
+      <a href="{{activation_link}}" style="background-color: #000; color: #fff; padding: 10px 20px; text-decoration: none;">Activar mi cuenta</a>
+    </main>
+  
+    <footer>
+      <p style="color: #666; font-size: 16px;">Contacto: <a href="mailto:
         practicaprograuniversidad@gmail.com">
         practicaprograuniversidad@gmail.com</a></p>
-        <p style="color: #666; font-size: 16px;"> Este email es una notificación automática, por favor no
-            responda a este correo.</p>
+
+      <p style="color: #666; margin-top: 30px; font-size: 16px;">Este email es una notificación automática, por favor no
+        responda a este correo.</p>
   </footer>
 </body>
 </html>
