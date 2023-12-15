@@ -34,6 +34,7 @@ from django.utils.html import strip_tags
 import base64
 import os
 from email.mime.image import MIMEImage
+from rest_framework.generics import UpdateAPIView
 
 logger = logging.getLogger(__name__)
 class CustomTokenObtainPairView(TokenObtainPairView):
@@ -273,22 +274,36 @@ class UserChangePasswordView(APIView):
   
   
   # actualizar usuario autenticado
-  def put(self, request, *args, **kwargs):
-    try:
-      response = super().post(request, *args, **kwargs)
-      # obtener datos del usuario autenticado
-      user = User.objects.get(id=request.user.id)
-      # se agregan los nuevos datos y los datos anteriores
-      serializer = UserChangePasswordSerializer(user, request.data)
-      
-      # validar los datos
-      if serializer.is_valid(raise_exception=True):
-        # guardar
-        serializer.save()
-        return Response(status=status.HTTP_200_OK, data={"message":"Contraseña actualizada correctamente", "user":serializer.data})
-    except Exception as e:
-      return Response(status=status.HTTP_400_BAD_REQUEST, data={"error":serializer.errors, "message":"No se pudo actualizar la contraseña"}) 
-    return response
+class ChangePasswordView(UpdateAPIView):
+    serializer_class = UserChangePasswordSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user
+
+    def update(self, request, *args, **kwargs):
+        try:
+            # Validar datos del serializer
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+
+            # Obtener el usuario autenticado
+            user = self.get_object()
+
+            # Verificar la contraseña actual
+            old_password = serializer.validated_data.get('old_password')
+            if not user.check_password(old_password):
+                return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": "Contraseña actual incorrecta."})
+
+            # Cambiar la contraseña
+            new_password = serializer.validated_data.get('new_password')
+            user.set_password(new_password)
+            user.save()
+
+            return Response(status=status.HTTP_200_OK, data={"message": "Contraseña actualizada correctamente."})
+
+        except Exception as e:
+            return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": str(e), "message": "No se pudo actualizar la contraseña."})
 
 
 class VerificarCuentaView(APIView):
@@ -310,7 +325,9 @@ class VerificarCuentaView(APIView):
 
                 # Obtener el usuario y activarlo
                 user = get_user_model().objects.get(pk=user_id)
-                print(user)
+                
+                if user.is_verified:
+                    return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": "La cuenta ya está activada"})
 
                 user.is_verified = True
                 user.save()
