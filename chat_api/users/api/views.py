@@ -120,10 +120,14 @@ class RegisterView(APIView):
                 user.otp = token
                 user.save()
                 activation_link = settings.ACTIVATION_URL.format(token=token)
-                image_path = os.path.join(settings.BASE_DIR, 'static', 'admin', 'img', 'logo.png')
+                image_path_logo = os.path.join(settings.BASE_DIR, 'static', 'admin', 'img', 'logo.png')
+
+                # Leer imágenes y convertirlas a base64
+                with open(image_path_logo, "rb") as image_file:
+                    image_base64_logo = base64.b64encode(image_file.read()).decode('utf-8')
+
                 # Construir el enlace de activación
-                with open(image_path, "rb") as image_file:
-                    image_base64 = base64.b64encode(image_file.read()).decode('utf-8')
+                activation_link = settings.ACTIVATION_URL.format(token=token)
 
                 # Enviar el correo electrónico
                 subject = 'Verificar cuenta'
@@ -136,10 +140,12 @@ class RegisterView(APIView):
                 msg = EmailMultiAlternatives(subject, text_content, from_email, to_email)
                 msg.attach_alternative(html_content, "text/html")
 
-                # Adjuntar la imagen
-                msg_img = MIMEImage(base64.b64decode(image_base64), name='logo.png')
-                msg_img.add_header('Content-ID', '<logo_image>')
-                msg.attach(msg_img)
+                # Adjuntar las imágenes
+                msg_img_logo = MIMEImage(base64.b64decode(image_base64_logo), name='logo.png')
+
+                msg_img_logo.add_header('Content-ID', '<logo_image>')
+                msg.attach(msg_img_logo)
+
 
                 msg.send()
 
