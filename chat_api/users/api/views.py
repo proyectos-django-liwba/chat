@@ -35,7 +35,7 @@ import base64
 import os
 from email.mime.image import MIMEImage
 from rest_framework.generics import UpdateAPIView
-
+from django.utils import timezone
 logger = logging.getLogger(__name__)
 class CustomTokenObtainPairView(TokenObtainPairView):
     # Definir que petición se puede hacer a este endpoint
@@ -60,6 +60,8 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                         {"error": "El usuario no está verificado."},
                         status=status.HTTP_401_UNAUTHORIZED
                     )
+                user.last_login = timezone.now()
+                user.save()
 
                 # Serializar y agregar los detalles del usuario a la respuesta del token
                 user_serializer = UserSerializer(user)
@@ -261,19 +263,6 @@ class UserView(APIView):
     except Exception as e:
         return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": "No se pudo desactivar el usuario"})
     
-    
-    
-
-# falta revisar estos endpoints y crear los del admin         
-class UserChangePasswordView(APIView):
-  # seguridad para el endpoint, solo usuarios autenticados
-  permission_classes = [IsAuthenticated]
-  
-  #definir que petición se puede hacer a este endpoint
-  http_method_names = ['put']
-  
-  
-  # actualizar usuario autenticado
 class ChangePasswordView(UpdateAPIView):
     serializer_class = UserChangePasswordSerializer
     permission_classes = [IsAuthenticated]
