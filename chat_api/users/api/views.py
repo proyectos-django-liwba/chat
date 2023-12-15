@@ -13,16 +13,13 @@ from users.api.serializers import (
 )
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
-from django.shortcuts import redirect
 import jwt
 from django.conf import settings
 from users.models import User
-from datetime import datetime
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import AccessToken
 from users.api.permissions import IsOwner
 from rest_framework.exceptions import PermissionDenied
-from django.core.mail import send_mail, get_connection
 from django.conf import settings
 from users.models import User
 import jwt
@@ -30,13 +27,14 @@ import logging
 from datetime import datetime, timedelta
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from django.utils.html import strip_tags
 import base64
 import os
 from email.mime.image import MIMEImage
 from rest_framework.generics import UpdateAPIView
-from django.utils import timezone
+
 logger = logging.getLogger(__name__)
+
+
 class CustomTokenObtainPairView(TokenObtainPairView):
     # Definir que petición se puede hacer a este endpoint
     http_method_names = ['post']
@@ -60,7 +58,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                         {"error": "El usuario no está verificado."},
                         status=status.HTTP_401_UNAUTHORIZED
                     )
-                user.last_login = timezone.now()
+                user.last_login = datetime.now()
                 user.save()
 
                 # Serializar y agregar los detalles del usuario a la respuesta del token
