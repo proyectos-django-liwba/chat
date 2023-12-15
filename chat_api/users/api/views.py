@@ -30,6 +30,10 @@ import logging
 from datetime import datetime, timedelta
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
+from django.utils.html import strip_tags
+import base64
+import os
+from email.mime.image import MIMEImage
 
 logger = logging.getLogger(__name__)
 class CustomTokenObtainPairView(TokenObtainPairView):
@@ -114,39 +118,29 @@ class RegisterView(APIView):
                 # Guardar el token en el campo 'otp' del usuario
                 user.otp = token
                 user.save()
-
-                # Construir el enlace de activación
                 activation_link = settings.ACTIVATION_URL.format(token=token)
+                image_path = os.path.join(settings.BASE_DIR, 'static', 'admin', 'img', 'logo.png')
+                # Construir el enlace de activación
+                with open(image_path, "rb") as image_file:
+                    image_base64 = base64.b64encode(image_file.read()).decode('utf-8')
 
-               
+                # Enviar el correo electrónico
+                subject = 'Verificar cuenta'
+                text_content = f'Haz clic en el siguiente enlace para verificar tu cuenta: {activation_link}'
+                html_content = render_to_string('Email.html', {'user': user, "activation_link": activation_link})
 
-                # Adjuntar el archivo si existe
-                email_attachment = None
-                try:
-                    email_attachment = open(os.path.join(settings.STATIC_ROOT, 'admin', 'img', 'logo.png'), 'rb').read()
-                except FileNotFoundError:
-                    email_attachment = None
+                from_email = 'practicaprograuniversidad@gmail.com'
+                to_email = [user.email]
 
-                # Crear el objeto EmailMessage
-                email = EmailMultiAlternatives(
-                    'Verificar cuenta',
-                    'Texto alternativo en caso de que el cliente de correo no admita HTML.',
-                    get_connection(username=True).username,
-                    [user.email],
-                )
+                msg = EmailMultiAlternatives(subject, text_content, from_email, to_email)
+                msg.attach_alternative(html_content, "text/html")
 
-                # Adjuntar el archivo si existe
-                if email_attachment:
-                    email.attach("logo.png", email_attachment, "image/png")
+                # Adjuntar la imagen
+                msg_img = MIMEImage(base64.b64decode(image_base64), name='logo.png')
+                msg_img.add_header('Content-ID', '<logo_image>')
+                msg.attach(msg_img)
 
-                
-                
-                html_message = render_to_string('Email.html', {'user': user, 'activation_link': activation_link})
-
-                # Adjuntar el cuerpo HTML
-                email.attach_alternative(html_message, "text/html")
-                # Enviar el correo
-                email.send(fail_silently=False)
+                msg.send()
 
                 # Respuesta en caso de éxito
                 return Response(status=status.HTTP_201_CREATED, data={"message": "Usuario creado correctamente"})
