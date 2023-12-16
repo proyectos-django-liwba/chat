@@ -369,7 +369,7 @@ class RecuperarPasswordView(APIView):
             recover_link = settings.RECOVER_PASSWORD_URL.format(token=token)
 
             # Lógica de envío de correo electrónico
-            subject = 'Recuperar Contraseña'
+            subject = 'Restablecimiento de contraseña de Chat Space'
             text_content = f'Haz clic en el siguiente enlace para cambiar tu contraseña: {recover_link}'
             html_content = render_to_string('RecuperarPassword.html', {'user': user, "recover_link": recover_link})
 
@@ -422,29 +422,34 @@ class RecuperarPasswordView(APIView):
         serializer = UserChangePasswordRecoverSerializer(data=data)
 
         try:
-            serializer.is_valid(raise_exception=True)
+            
+            if serializer.is_valid(raise_exception=True):
+                
+                token = serializer.validated_data['otp']
 
-            token = serializer.validated_data['otp']
+                # Decodificar el token para obtener la información
+                payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
 
-            # Decodificar el token para obtener la información
-            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+                # Obtener el ID de usuario del payload
+                user_id = payload.get('user_id')
 
-            # Obtener el ID de usuario del payload
-            user_id = payload.get('user_id')
+                user = get_user_model().objects.get(pk=user_id)
 
-            user = get_user_model().objects.get(pk=user_id)
-
-            if token == user.otp:
-                if serializer.validated_data['password'] == serializer.validated_data['confirm_password']:
-                    # Utilizar set_password para almacenar la contraseña de forma segura
-                    user.set_password(serializer.validated_data['password'])
-                    user.otp = None
-                    user.save()
-                    return Response(status=status.HTTP_200_OK, data={"message": "Contraseña actualizada correctamente."})
+                if token == user.otp:
+                    if serializer.validated_data['password'] == serializer.validated_data['confirm_password']:
+                        # Utilizar set_password para almacenar la contraseña de forma segura
+                        
+                        user.set_password(serializer.validated_data['password'])
+                        user.otp = None
+                        user.save()
+                        
+                        return Response(status=status.HTTP_200_OK, data={"message": "Contraseña actualizada correctamente."})
+                    else:
+                        return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": "Las contraseñas no coinciden."})
                 else:
-                    return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": "Las contraseñas no coinciden."})
+                    return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": "Token no válido."})
             else:
-                return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": "Token no válido."})
+                return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": "Faltan datos."})
 
         except jwt.ExpiredSignatureError:
             return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": "El token ha expirado."})
