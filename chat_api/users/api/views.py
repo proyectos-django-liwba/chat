@@ -369,8 +369,8 @@ class RecuperarPasswordView(APIView):
             recover_link = settings.RECOVER_PASSWORD_URL.format(token=token)
 
             # Lógica de envío de correo electrónico
-            subject = 'Verificar cuenta'
-            text_content = f'Haz clic en el siguiente enlace para verificar tu cuenta: {recover_link}'
+            subject = 'Recuperar Contraseña'
+            text_content = f'Haz clic en el siguiente enlace para cambiar tu contraseña: {recover_link}'
             html_content = render_to_string('RecuperarPassword.html', {'user': user, "recover_link": recover_link})
 
             from_email = 'practicaprograuniversidad@gmail.com'
