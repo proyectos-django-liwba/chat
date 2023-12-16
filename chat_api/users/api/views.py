@@ -279,22 +279,24 @@ class ChangePasswordView(UpdateAPIView):
         try:
             # Validar datos del serializer
             serializer = self.get_serializer(data=request.data)
-            serializer.is_valid(raise_exception=True)
+            
+            if serializer.is_valid(raise_exception=True):
+                # Obtener el usuario autenticado
+                user = self.get_object()
 
-            # Obtener el usuario autenticado
-            user = self.get_object()
+                # Verificar la contraseña actual
+                old_password = serializer.validated_data.get('old_password')
+                if not user.check_password(old_password):
+                    return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": "Contraseña actual incorrecta."})
 
-            # Verificar la contraseña actual
-            old_password = serializer.validated_data.get('old_password')
-            if not user.check_password(old_password):
-                return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": "Contraseña actual incorrecta."})
+                # Cambiar la contraseña
+                new_password = serializer.validated_data.get('new_password')
+                user.set_password(new_password)
+                user.save()
 
-            # Cambiar la contraseña
-            new_password = serializer.validated_data.get('new_password')
-            user.set_password(new_password)
-            user.save()
-
-            return Response(status=status.HTTP_200_OK, data={"message": "Contraseña actualizada correctamente."})
+                return Response(status=status.HTTP_200_OK, data={"message": "Contraseña actualizada correctamente."})
+            else: 
+                return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": "Faltan datos."})
 
         except Exception as e:
             return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": str(e), "message": "No se pudo actualizar la contraseña."})
@@ -358,7 +360,7 @@ class RecuperarPasswordView(APIView):
     def _generate_token(user):
         payload = {
             'user_id': user.id,
-            'exp': datetime.utcnow() + timedelta(days=365 * 100)
+            'exp': datetime.utcnow() + timedelta(days=1)
         }
         return jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
     

@@ -2,37 +2,48 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from rooms.api.serializers import RoomSerializer, registerRoomSerializer
+from rooms.api.serializers import RoomSerializer, RegisterRoomSerializer
 from rooms.api.permissions import RoomPermission
 from rooms.models import Room
 from django.shortcuts import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from django.db.models.deletion import ProtectedError
 from django.http import Http404
+from django.db import IntegrityError
+from django.db import transaction
 
 class RegisterView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        serializer = registerRoomSerializer(data=request.data)
+        serializer = RegisterRoomSerializer(data=request.data)
 
-        if serializer.is_valid():
-            user = request.user
-            try:
-                room = Room.objects.create(
-                    name=serializer.validated_data['name'],
-                    description=serializer.validated_data['description'],
-                    user=user
-                )
-                room.users.add(user)
-                # Otra lógica que desees implementar...
+        try:
+            if serializer.is_valid(raise_exception=True):
+                user = request.user
+                
+                #se crea una funcion atomica por si ocurre un error en la creacion de la sala no se guarde nada
+                with transaction.atomic():
+                    # Verificar si ya existe una sala con el mismo nombre
+                    if Room.objects.filter(name=serializer.validated_data['name']).exists():
+                        return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": "Ya existe una sala con este nombre."})
+
+                    # Verificar si el usuario tiene más de 3 salas
+                    if Room.objects.filter(user_id=user).count() >= 3:
+                        return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": "El usuario ya tiene el máximo permitido de salas."})
+
+                    # Crear la sala y añadir al usuario como seguidor
+                    room = Room.objects.create(
+                        user_id=user,
+                        **serializer.validated_data,
+                    )
+                    room.followers.add(user)
+
                 return Response(status=status.HTTP_201_CREATED, data={"message": "Sala creada correctamente"})
-            except Exception as e:
-                return Response({"message": f"Error al crear la sala: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
-        
+
+        except IntegrityError:
+            return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": "Ocurrió un error al crear la sala."})
+
 class RoomApiView(APIView):
     permission_classes = [RoomPermission]
     http_method_names = ['put', 'patch', 'delete']
@@ -41,7 +52,7 @@ class RoomApiView(APIView):
         room = get_object_or_404(Room, id=room_id)
         
         # Verificar si el usuario autenticado es el propietario de la sala o un administrador
-        if request.user == room.user or request.user.role == 'Admin':
+        if request.user_id == room.user_id or request.user_id.role == 'Admin':
             serializer = RoomSerializer(room, data=request.data)
 
             if serializer.is_valid():
@@ -59,7 +70,7 @@ class RoomApiView(APIView):
     def delete(self, request, room_id):
         room = get_object_or_404(Room, id=room_id)
 
-        if request.user == room.user or request.user.role == 'Admin':
+        if request.user == room.user_id or request.user.role == 'Admin':
             try:
                 room.delete()
                 return Response({"message": "La sala se eliminó con éxito."}, status=status.HTTP_200_OK)
@@ -83,9 +94,9 @@ class RoomParticipateApiView(APIView):
         # Verificar si el usuario no es el propietario y no es un administrador
         if request.user != room.user and request.user.role != 'Admin':
             # Verificar si el usuario ya es un participante en la sala
-            if not room.users.filter(id=request.user.id).exists():
+            if not room.followers.filter(id=request.user.id).exists():
                 # Agregar al usuario como participante
-                room.users.add(request.user)
+                room.followers.add(request.user)
                 return Response({"message": "Te has unido a la sala correctamente."}, status=status.HTTP_200_OK)
             else:
                 return Response({"message": "Ya eres un participante en esta sala."}, status=status.HTTP_400_BAD_REQUEST)
@@ -107,12 +118,12 @@ class LeaveRoomAPIView(APIView):
 
     def post(self, request, room_id):
         room = get_object_or_404(Room, id=room_id)
-        user = request.user
+        user = request.user_id
 
         # Verificar si el usuario es un participante en la sala
-        if room.users.filter(id=user.id).exists():
+        if room.followers.filter(id=user.id).exists():
             # Remover al usuario de la sala
-            room.users.remove(user)
+            room.followers.remove(user)
             serializer = RoomSerializer(room)
             return Response(serializer.data, status=status.HTTP_200_OK)
         else:
