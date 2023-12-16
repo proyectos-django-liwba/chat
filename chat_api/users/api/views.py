@@ -10,7 +10,10 @@ from users.api.serializers import (
   UserChangePasswordSerializer,
   VerificarCuentaSerializer,
   UserUpdatePathSerializer,
+  UserChangePasswordRecoverSerializer,
 )
+from django.utils.crypto import get_random_string
+from django.utils.timezone import now
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 import jwt
@@ -22,7 +25,6 @@ from users.api.permissions import IsOwner
 from rest_framework.exceptions import PermissionDenied
 from django.conf import settings
 from users.models import User
-import jwt
 import logging
 from datetime import datetime, timedelta
 from rest_framework import serializers
@@ -33,7 +35,6 @@ from email.mime.image import MIMEImage
 from rest_framework.generics import UpdateAPIView
 
 logger = logging.getLogger(__name__)
-
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     # Definir que petición se puede hacer a este endpoint
@@ -268,7 +269,7 @@ class UserView(APIView):
         return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": "No se pudo desactivar el usuario"})
     
 class ChangePasswordView(UpdateAPIView):
-    serializer_class = UserChangePasswordSerializer
+    serializer_class = UserChangePasswordRecoverSerializer
     permission_classes = [IsAuthenticated]
 
     def get_object(self):
@@ -323,6 +324,7 @@ class VerificarCuentaView(APIView):
                     return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": "La cuenta ya está activada"})
 
                 user.is_verified = True
+                user.otp = None
                 user.save()
 
             return Response(status=status.HTTP_200_OK, data={"message": "Cuenta activada correctamente!"})
@@ -338,3 +340,122 @@ class VerificarCuentaView(APIView):
 
         except Exception as e:
             return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR, data={"error": str(e)})     
+
+
+class TokenGenerationError(Exception):
+    pass
+
+class EmailSendingError(Exception):
+    pass
+
+
+class RecuperarPasswordView(APIView):
+    
+    http_method_names = ['post', 'patch']
+    
+    
+    @staticmethod
+    def _generate_token(user):
+        payload = {
+            'user_id': user.id,
+            'exp': datetime.utcnow() + timedelta(days=365 * 100)
+        }
+        return jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
+    
+    
+    def _send_reset_email(self, user, token, email):
+        try:
+            # Construir el enlace de activación
+            recover_link = settings.RECOVER_PASSWORD_URL.format(token=token)
+
+            # Lógica de envío de correo electrónico
+            subject = 'Verificar cuenta'
+            text_content = f'Haz clic en el siguiente enlace para verificar tu cuenta: {recover_link}'
+            html_content = render_to_string('RecuperarPassword.html', {'user': user, "recover_link": recover_link})
+
+            from_email = 'practicaprograuniversidad@gmail.com'
+            to_email = [email]  # Usar el correo electrónico proporcionado en lugar del correo del usuario
+
+            msg = EmailMultiAlternatives(subject, text_content, from_email, to_email)
+            msg.attach_alternative(html_content, "text/html")
+
+            # Adjuntar imágenes
+            image_path_logo = os.path.join(settings.BASE_DIR, 'static', 'admin', 'img', 'logo.png')
+            with open(image_path_logo, "rb") as image_file:
+                image_base64_logo = base64.b64encode(image_file.read()).decode('utf-8')
+            msg_img_logo = MIMEImage(base64.b64decode(image_base64_logo), name='logo.png')
+            msg_img_logo.add_header('Content-ID', '<logo_image>')
+            msg.attach(msg_img_logo)
+
+            msg.send()
+        except Exception as e:
+            raise EmailSendingError(f"Error al enviar el correo: {str(e)}")
+        
+    def post(self, request, *args, **kwargs):
+        try:
+            email = request.data.get('email')
+            if not email:
+                return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": "Se requiere proporcionar un correo electrónico."})
+
+            # Verificar si el usuario con el correo electrónico proporcionado existe
+            user = User.objects.filter(email=email).first()
+            if not user:
+                return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": "No existe un usuario con este correo electrónico."})
+
+            token = self._generate_token(user)
+
+            # Guardar el token en el campo 'otp' del usuario
+            user.otp = token
+            user.save()
+
+            # Enviar el correo de recuperación
+            self._send_reset_email(user, token, email)
+
+            return Response(status=status.HTTP_200_OK, data={"message": "Correo de recuperación enviado correctamente."})
+        except EmailSendingError as e:
+            return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR, data={"error": str(e), "message": "Error al enviar el correo de recuperación."})
+        except Exception as e:
+            return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": str(e), "message": "No se pudo enviar el correo de recuperación."})   
+    
+    def patch(self, request, *args, **kwargs):
+        data = request.data
+        serializer = UserChangePasswordRecoverSerializer(data=data)
+
+        try:
+            serializer.is_valid(raise_exception=True)
+
+            token = serializer.validated_data['otp']
+
+            # Decodificar el token para obtener la información
+            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+
+            # Obtener el ID de usuario del payload
+            user_id = payload.get('user_id')
+
+            user = get_user_model().objects.get(pk=user_id)
+
+            if token == user.otp:
+                if serializer.validated_data['password'] == serializer.validated_data['confirm_password']:
+                    # Utilizar set_password para almacenar la contraseña de forma segura
+                    user.set_password(serializer.validated_data['password'])
+                    user.otp = None
+                    user.save()
+                    return Response(status=status.HTTP_200_OK, data={"message": "Contraseña actualizada correctamente."})
+                else:
+                    return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": "Las contraseñas no coinciden."})
+            else:
+                return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": "Token no válido."})
+
+        except jwt.ExpiredSignatureError:
+            return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": "El token ha expirado."})
+
+        except jwt.InvalidTokenError:
+            return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": "Token no válido."})
+
+        except get_user_model().DoesNotExist:
+            return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": "No se encontró el usuario asociado al token."})
+
+        except Exception as e:
+            return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": str(e), "message": "No se pudo actualizar la contraseña."})
+
+    

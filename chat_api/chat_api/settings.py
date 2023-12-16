@@ -192,3 +192,4 @@ EMAIL_TIMEOUT = 300
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 ACTIVATION_URL = 'http://localhost:5173/activate/{token}/'
+RECOVER_PASSWORD_URL = 'http://localhost:5173/change-password/{token}'

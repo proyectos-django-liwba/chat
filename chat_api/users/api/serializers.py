@@ -74,3 +74,25 @@ class UserSerializerUsername(serializers.ModelSerializer):
   class Meta:
       model = User
       fields = ['id', 'avatar', 'username','role']
+
+
+class UserChangePasswordRecoverSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, required=True)
+    confirm_password = serializers.CharField(write_only=True, required=True)
+    otp = serializers.CharField()
+    class Meta:
+        model = User
+        fields = ['password', 'confirm_password', 'otp']
+
+    def update(self, instance, validated_data):
+        password = validated_data.get('password')
+        confirm_password = validated_data.get('confirm_password')
+        
+
+        if password != confirm_password:
+            raise serializers.ValidationError({'password': 'Las contraseñas no coinciden.'})
+
+        instance.set_password(password)
+        instance.save()
+
+        return instance
