@@ -6,12 +6,9 @@ from rooms.api.serializers import RoomSerializer, RegisterRoomSerializer
 from rooms.api.permissions import RoomPermission
 from rooms.models import Room
 from django.shortcuts import get_object_or_404
-from rest_framework.permissions import IsAuthenticated
 from django.db.models.deletion import ProtectedError
-from django.http import Http404
 from django.db import IntegrityError
 from django.db import transaction
-
 class RegisterView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -35,14 +32,24 @@ class RegisterView(APIView):
                     # Crear la sala y añadir al usuario como seguidor
                     room = Room.objects.create(
                         user_id=user,
-                        **serializer.validated_data,
+                        name=serializer.validated_data['name'],
+                        description=serializer.validated_data['description'],
+                        image=serializer.validated_data['image'],
+                        is_active=True,
+                        user_count=1,
                     )
                     room.followers.add(user)
 
                 return Response(status=status.HTTP_201_CREATED, data={"message": "Sala creada correctamente"})
+            else:
+                return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": "Faltan datos"})
 
         except IntegrityError:
             return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": "Ocurrió un error al crear la sala."})
+        
+    def get(self, request):
+        serializer = RoomSerializer(data=request.data)
+        
 
 class RoomApiView(APIView):
     permission_classes = [RoomPermission]
@@ -50,22 +57,19 @@ class RoomApiView(APIView):
 
     def put(self, request, room_id):
         room = get_object_or_404(Room, id=room_id)
-        
+
         # Verificar si el usuario autenticado es el propietario de la sala o un administrador
-        if request.user_id == room.user_id or request.user_id.role == 'Admin':
+        if request.user == room.user_id or request.user.role == 'Admin':
             serializer = RoomSerializer(room, data=request.data)
 
-            if serializer.is_valid():
+            if serializer.is_valid(raise_exception=True):
                 try:
                     serializer.save()
                     return Response({"message": "Sala actualizada correctamente"}, status=status.HTTP_200_OK)
                 except Exception as e:
                     return Response({"message": f"Error al actualizar la sala: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
-            else:
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         else:
             return Response({"message": "No tienes permisos para actualizar esta sala."}, status=status.HTTP_403_FORBIDDEN)
-
 
     def delete(self, request, room_id):
         room = get_object_or_404(Room, id=room_id)
