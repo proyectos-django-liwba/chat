@@ -141,13 +141,15 @@ class LeaveRoomAPIView(APIView):
 
     def post(self, request, room_id):
         room = get_object_or_404(Room, id=room_id)
-        user = request.user_id
+        user = request.user
 
         # Verificar si el usuario es un participante en la sala
         if room.followers.filter(id=user.id).exists():
             # Remover al usuario de la sala
+            room.user_count -= 1
             room.followers.remove(user)
+            room.save()
             serializer = RoomSerializer(room)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response({"message": "Has dejado de ser participante de la sala."}, status=status.HTTP_200_OK)
         else:
-            return Response({"detail": "No eres un participante en esta sala."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "No eres un participante de esta sala."}, status=status.HTTP_400_BAD_REQUEST)
