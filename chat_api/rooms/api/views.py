@@ -91,18 +91,20 @@ class RoomParticipateApiView(APIView):
     permission_classes = [IsAuthenticated]
     http_method_names = ['put', 'patch', 'delete', 'post']
 
-    def post(self, request, room_id):  # Ajusta el nombre del argumento a 'room_id'
+    def post(self, request, room_id):
         try:
             room = Room.objects.get(id=room_id)
         except Room.DoesNotExist:
             raise Http404("La sala no existe.")
 
         # Verificar si el usuario no es el propietario y no es un administrador
-        if request.user != room.user and request.user.role != 'Admin':
+        if request.user != room.user_id and request.user.role != 'Admin':
             # Verificar si el usuario ya es un participante en la sala
             if not room.followers.filter(id=request.user.id).exists():
+                room.user_count += 1
                 # Agregar al usuario como participante
                 room.followers.add(request.user)
+                room.save()
                 return Response({"message": "Te has unido a la sala correctamente."}, status=status.HTTP_200_OK)
             else:
                 return Response({"message": "Ya eres un participante en esta sala."}, status=status.HTTP_400_BAD_REQUEST)
