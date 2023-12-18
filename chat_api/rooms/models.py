@@ -5,7 +5,7 @@ from users.models import User
 
 class Room(models.Model):
     name = models.CharField(max_length=100, unique=True)
-    image = models.TextField()
+    image = models.TextField(max_length=2000000)
     description = models.TextField(max_length=300)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
