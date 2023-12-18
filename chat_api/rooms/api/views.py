@@ -64,6 +64,7 @@ class RoomViewSet(ModelViewSet):
 
 
 class RoomGetViewSet(ModelViewSet):
+    http_method_names = ['get']
     def get_queryset(self):
         # Filtrar las salas que estén activas
         return Room.objects.filter(is_active=True)
