@@ -2,7 +2,7 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from rooms.api.serializers import RoomSerializer, RegisterRoomSerializer
+from rooms.api.serializers import RoomSerializer, RegisterRoomSerializer,RoomPreviewSerializer
 from rooms.api.permissions import RoomPermission
 from rooms.models import Room
 from django.shortcuts import get_object_or_404
@@ -119,14 +119,20 @@ class getRooms(APIView):
     def get(self, request):
         user = request.user
         rooms = Room.objects.filter(is_active=True)
-        page_size = 10
-        paginator = Paginator(rooms, page_size)
-        page_number = request.GET.get('page')
-        page_obj = paginator.get_page(page_number)
-        serializer = RoomSerializer(page_obj, many=True)
+        serializer = RoomPreviewSerializer(rooms, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
-
+#obtener una sala por id
+class getRoomById(APIView):
+    permission_classes = [IsAuthenticated]
+    http_method_names = ['get']
+    
+    def get(self, request, room_id):
+        user = request.user
+        room = Room.objects.get(id=room_id)
+        serializer = RoomSerializer(room)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
 #obtener todas las salas en las que participa el usuario
 class getRoomsParticipe(APIView):
     permission_classes = [IsAuthenticated]
