@@ -11,14 +11,14 @@ from django.db import transaction
 from django.http import Http404
 from rest_framework.viewsets import ModelViewSet,ReadOnlyModelViewSet
 from users.models import User
+from rest_framework.decorators import action
 class RoomViewSet(ModelViewSet):
     http_method_names = ['get', 'post', 'patch', 'delete']
     queryset = Room.objects.all()
     serializer_class = RoomSerializer
-
-
     permission_classes = [RoomPermission, IsAuthenticated]
-
+    
+    #obtener todas las salas activas   
     def get_serializer_class(self):
         if self.action in ['create', 'update']:
             return RoomPreviewSerializer
@@ -76,23 +76,26 @@ class RoomGetViewSet(ReadOnlyModelViewSet):
         # Obtener todas las salas activas con información limitada
         queryset = self.get_queryset()
         serializer = RoomPreviewSerializer(queryset, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response({"Rooms": serializer.data}, status=status.HTTP_200_OK)
+
 
     def retrieve(self, request, pk=None):
         # Obtener toda la información de una sala por su ID
         room = self.get_object()
         serializer = RoomSerializer(room)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response({"Rooms": serializer.data}, status=status.HTTP_200_OK)
 
-class RoomFollowerView(APIView):
+class RoomFollowerViewSet(ModelViewSet):
+    serializer_class = RoomSerializer
     permission_classes = [IsAuthenticated]
-    http_method_names = ['put', 'patch', 'delete', 'post']
 
-    def post(self, request, room_id):
-        try:
-            room = Room.objects.get(id=room_id)
-        except Room.DoesNotExist:
-            raise Http404("La sala no existe.")
+    def get_queryset(self):
+        user = self.request.user
+        return Room.objects.filter(followers=user)
+
+    @action(detail=True, methods=['post'])
+    def join(self, request, pk=None):
+        room = self.get_object()
 
         # Verificar si el usuario no es el propietario y no es un administrador
         if request.user != room.user_id and request.user.role != 'Admin':
@@ -102,34 +105,28 @@ class RoomFollowerView(APIView):
                 # Agregar al usuario como participante
                 room.followers.add(request.user)
                 room.save()
-                return Response({"message": "Te has unido a la sala correctamente."}, status=status.HTTP_200_OK)
+                serializer = self.get_serializer(room)
+                return Response(serializer.data, status=status.HTTP_200_OK)
             else:
                 return Response({"message": "Ya eres un participante en esta sala."}, status=status.HTTP_400_BAD_REQUEST)
         else:
             return Response({"message": "No puedes unirte a tu propia sala o como administrador."}, status=status.HTTP_403_FORBIDDEN)
-        
-#obtener todas las salas activas      
-class getRooms(APIView):
-    permission_classes = [IsAuthenticated]
-    http_method_names = ['get']
-    
-    def get(self, request):
+
+    @action(detail=True, methods=['delete'])
+    def leave(self, request, pk=None):
+        room = self.get_object()
         user = request.user
-        rooms = Room.objects.filter(is_active=True)
-        serializer = RoomPreviewSerializer(rooms, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    
-#obtener una sala por id
-class getRoomById(APIView):
-    permission_classes = [IsAuthenticated]
-    http_method_names = ['get']
-    
-    def get(self, request, room_id):
-        user = request.user
-        room = Room.objects.get(id=room_id)
-        serializer = RoomSerializer(room)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    
+
+        # Verificar si el usuario es un participante en la sala
+        if room.followers.filter(id=user.id).exists():
+            # Remover al usuario de la sala
+            room.user_count -= 1
+            room.followers.remove(user)
+            room.save()
+            serializer = self.get_serializer(room)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response({"detail": "No eres un participante de esta sala."}, status=status.HTTP_400_BAD_REQUEST)
 #obtener todas las salas en las que participa el usuario
 class getRoomsParticipe(APIView):
     permission_classes = [IsAuthenticated]
