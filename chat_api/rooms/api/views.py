@@ -111,7 +111,7 @@ class RoomParticipateApiView(APIView):
         else:
             return Response({"message": "No puedes unirte a tu propia sala o como administrador."}, status=status.HTTP_403_FORBIDDEN)
         
-        
+#obtener todas las salas activas      
 class getRooms(APIView):
     permission_classes = [IsAuthenticated]
     http_method_names = ['get']
@@ -127,6 +127,7 @@ class getRooms(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
     
 
+#obtener todas las salas en las que participa el usuario
 class getRoomsParticipe(APIView):
     permission_classes = [IsAuthenticated]
     http_method_names = ['get']

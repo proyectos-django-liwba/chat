@@ -10,7 +10,8 @@ class RegisterRoomSerializer(serializers.ModelSerializer):
 
 class RoomSerializer(serializers.ModelSerializer):
     #followers = UserSerializerUsername(many=True)
-    
+    user = UserSerializerUsername(source='user_id')
     class Meta:
+        
         model = Room
-        fields = ['id', 'name', 'description', 'image', 'is_active', 'user_id', 'created_at',  'user_count']
+        fields = ['id', 'name', 'description', 'image', 'is_active', 'user', 'created_at',  'user_count', 'followers']
