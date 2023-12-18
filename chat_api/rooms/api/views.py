@@ -9,11 +9,13 @@ from django.shortcuts import get_object_or_404
 from django.db.models.deletion import ProtectedError
 from django.db import transaction
 from django.http import Http404
-from rest_framework.viewsets import ModelViewSet
+from rest_framework.viewsets import ModelViewSet,ReadOnlyModelViewSet
 from users.models import User
 class RoomViewSet(ModelViewSet):
+    http_method_names = ['get', 'post', 'patch', 'delete']
     queryset = Room.objects.all()
     serializer_class = RoomSerializer
+
 
     permission_classes = [RoomPermission, IsAuthenticated]
 
@@ -63,8 +65,9 @@ class RoomViewSet(ModelViewSet):
         return Response({"message": "La sala se eliminó con éxito."}, status=status.HTTP_200_OK)
 
 
-class RoomGetViewSet(ModelViewSet):
+class RoomGetViewSet(ReadOnlyModelViewSet):
     http_method_names = ['get']
+    serializer_class = RoomPreviewSerializer 
     def get_queryset(self):
         # Filtrar las salas que estén activas
         return Room.objects.filter(is_active=True)
