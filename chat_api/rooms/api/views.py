@@ -9,6 +9,8 @@ from django.shortcuts import get_object_or_404
 from django.db.models.deletion import ProtectedError
 from django.db import IntegrityError
 from django.db import transaction
+from django.core.paginator import Paginator
+from django.http import Http404
 class RegisterView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -113,10 +115,25 @@ class getRooms(APIView):
     http_method_names = ['get']
     
     def get(self, request):
-        rooms = Room.objects.all()
-        serializer = RoomSerializer(rooms, many=True)
+        user = request.user
+        rooms = Room.objects.filter(is_active=True)
+        page_size = 10
+        paginator = Paginator(rooms, page_size)
+        page_number = request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
+        serializer = RoomSerializer(page_obj, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
+
+class getRoomsParticipe(APIView):
+    permission_classes = [IsAuthenticated]
+    http_method_names = ['get']
+    
+    def get(self, request):
+        user = request.user
+        rooms_participated = Room.objects.filter(followers=user)
+        serializer = RoomSerializer(rooms_participated, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 class LeaveRoomAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
