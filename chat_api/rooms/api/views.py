@@ -112,6 +112,7 @@ class RoomFollowerViewSet(ModelViewSet):
         else:
             return Response({"message": "No puedes unirte a tu propia sala o como administrador."}, status=status.HTTP_403_FORBIDDEN)
 
+
     @action(detail=True, methods=['delete'])
     def leave(self, request, pk=None):
         room = self.get_object()
