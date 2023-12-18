@@ -7,7 +7,7 @@ from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 # router de las apps
 from users.api.router import urlpatterns as users_urls
-from rooms.api.router import urlpatterns as rooms_urls
+from rooms.api.router import router_room
 # libreria jwt
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
@@ -37,7 +37,7 @@ urlpatterns = [
     path('redocs/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     #auth - jwt - users
     path('api/', include('users.api.router')), 
-    path('api/', include('rooms.api.router')),
+    path('api/', include(router_room.urls)),
     
     
 ]

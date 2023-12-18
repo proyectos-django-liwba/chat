@@ -7,87 +7,64 @@ from rooms.api.permissions import RoomPermission
 from rooms.models import Room
 from django.shortcuts import get_object_or_404
 from django.db.models.deletion import ProtectedError
-from django.db import IntegrityError
 from django.db import transaction
-from django.core.paginator import Paginator
 from django.http import Http404
-class RegisterView(APIView):
-    permission_classes = [IsAuthenticated]
+from rest_framework import viewsets
+from users.models import User
+class RoomViewSet(viewsets.ModelViewSet):
+    queryset = Room.objects.all()
+    serializer_class = RoomSerializer
 
-    def post(self, request):
-        serializer = RegisterRoomSerializer(data=request.data)
+    permission_classes = [RoomPermission, IsAuthenticated]
 
-        try:
-            if serializer.is_valid(raise_exception=True):
-                user = request.user
-                
-                #se crea una funcion atomica por si ocurre un error en la creacion de la sala no se guarde nada
-                with transaction.atomic():
-                    # Verificar si ya existe una sala con el mismo nombre
-                    if Room.objects.filter(name=serializer.validated_data['name']).exists():
-                        return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": "Ya existe una sala con este nombre."})
+    def get_serializer_class(self):
+        if self.action in ['create', 'update']:
+            return RoomPreviewSerializer
+        return RoomPreviewSerializer
+    @transaction.atomic
+    def perform_create(self, serializer):
+        # Obtener la instancia del usuario a partir del ID
+        user_id = self.request.user.id
+        user_instance = User.objects.get(id=user_id)
 
-                    # Verificar si el usuario tiene más de 3 salas
-                    if Room.objects.filter(user_id=user).count() >= 3:
-                        return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": "El usuario ya tiene el máximo permitido de salas."})
+        # Asignar la instancia del usuario al campo user_id y a la relación followers
+        room = serializer.save(user_id=user_instance)
+        room.followers.add(user_instance)
 
-                    # Crear la sala y añadir al usuario como seguidor
-                    room = Room.objects.create(
-                        user_id=user,
-                        name=serializer.validated_data['name'],
-                        description=serializer.validated_data['description'],
-                        image=serializer.validated_data['image'],
-                        is_active=True,
-                        user_count=1,
-                    )
-                    room.followers.add(user)
+    def create(self, request, *args, **kwargs):
+        with transaction.atomic():
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            self.perform_create(serializer)
+            return Response({"message": "Sala creada exitosamente"}, status=status.HTTP_201_CREATED)
 
-                return Response(status=status.HTTP_201_CREATED, data={"message": "Sala creada correctamente"})
-            else:
-                return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": "Faltan datos"})
+    def update(self, request, pk=None, *args, **kwargs):
+        room = self.get_object()
+        if request.user != room.user_id and request.user.role != 'Admin':
+            
+            error_message = "Usted no tiene permiso para actualizar la sala."
+            return Response({"error": error_message}, status=status.HTTP_403_FORBIDDEN)
 
-        except IntegrityError:
-            return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": "Ocurrió un error al crear la sala."})
-        
-    def get(self, request):
-        serializer = RoomSerializer(data=request.data)
-        
+        serializer = self.get_serializer(room, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
 
-class RoomApiView(APIView):
-    permission_classes = [RoomPermission]
-    http_method_names = ['put', 'patch', 'delete']
+        return Response({"message": "Sala Actualizada correctamente!"}, status=status.HTTP_200_OK)
 
-    def put(self, request, room_id):
-        room = get_object_or_404(Room, id=room_id)
 
-        # Verificar si el usuario autenticado es el propietario de la sala o un administrador
-        if request.user == room.user_id or request.user.role == 'Admin':
-            serializer = RoomSerializer(room, data=request.data)
-
-            if serializer.is_valid(raise_exception=True):
-                try:
-                    serializer.save()
-                    return Response({"message": "Sala actualizada correctamente"}, status=status.HTTP_200_OK)
-                except Exception as e:
-                    return Response({"message": f"Error al actualizar la sala: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            return Response({"message": "No tienes permisos para actualizar esta sala."}, status=status.HTTP_403_FORBIDDEN)
-
-    def delete(self, request, room_id):
-        room = get_object_or_404(Room, id=room_id)
-
-        if request.user == room.user_id or request.user.role == 'Admin':
-            try:
-                room.delete()
-                return Response({"message": "La sala se eliminó con éxito."}, status=status.HTTP_200_OK)
-            except ProtectedError:
-                return Response({"message": "No puedes eliminar la sala porque tiene participantes."}, status=status.HTTP_400_BAD_REQUEST)
-            except Exception as e:
-                return Response({"message": f"Error al eliminar la sala: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        else:
+    def destroy(self, request, pk=None, *args, **kwargs):
+        room = self.get_object()
+        if request.user != room.user_id and request.user.role != 'Admin':
             return Response({"message": "No tienes permisos para eliminar esta sala."}, status=status.HTTP_403_FORBIDDEN)
+        try:
+            self.perform_destroy(room)
+        except ProtectedError:
+            return Response({"message": "No puedes eliminar la sala porque tiene participantes."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"message": "La sala se eliminó con éxito."}, status=status.HTTP_200_OK)
 
-class RoomParticipateApiView(APIView):
+
+
+class RoomFollowerView(APIView):
     permission_classes = [IsAuthenticated]
     http_method_names = ['put', 'patch', 'delete', 'post']
 
