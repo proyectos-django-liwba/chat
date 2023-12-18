@@ -30,15 +30,15 @@ class RoomViewSet(ModelViewSet):
         user_instance = User.objects.get(id=user_id)
 
         # Asignar la instancia del usuario al campo user_id y a la relación followers
-        room = serializer.save(user_id=user_instance)
+        serializer.validated_data['user_id'] = user_instance
+        room = serializer.save()
         room.followers.add(user_instance)
 
     def create(self, request, *args, **kwargs):
-        with transaction.atomic():
-            serializer = self.get_serializer(data=request.data)
-            serializer.is_valid(raise_exception=True)
-            self.perform_create(serializer)
-            return Response({"message": "Sala creada exitosamente"}, status=status.HTTP_201_CREATED)
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return Response({"message": "Sala creada exitosamente"}, status=status.HTTP_201_CREATED)
 
     def update(self, request, pk=None, *args, **kwargs):
         room = self.get_object()
@@ -93,24 +93,33 @@ class RoomFollowerViewSet(ModelViewSet):
         user = self.request.user
         return Room.objects.filter(followers=user)
 
-    @action(detail=True, methods=['post'])
-    def join(self, request, pk=None):
-        room = self.get_object()
+    @action(detail=False, methods=['post'])
+    def join(self, request):
+        room_id = request.data.get('room_id')
 
-        # Verificar si el usuario no es el propietario y no es un administrador
-        if request.user != room.user_id and request.user.role != 'Admin':
-            # Verificar si el usuario ya es un participante en la sala
-            if not room.followers.filter(id=request.user.id).exists():
-                room.user_count += 1
-                # Agregar al usuario como participante
-                room.followers.add(request.user)
-                room.save()
-                serializer = self.get_serializer(room)
-                return Response(serializer.data, status=status.HTTP_200_OK)
+        # Verificar si el usuario está autenticado
+        if request.user.is_authenticated:
+            try:
+                room = Room.objects.get(pk=room_id)
+            except Room.DoesNotExist:
+                return Response({"message": "La sala no existe."}, status=status.HTTP_404_NOT_FOUND)
+
+            # Verificar si el usuario no es el propietario y no es un administrador
+            if request.user != room.user_id and request.user.role != 'Admin':
+                # Verificar si el usuario ya es un participante en la sala
+                if not room.followers.filter(id=request.user.id).exists():
+                    room.user_count += 1
+                    # Agregar al usuario como participante
+                    room.followers.add(request.user)
+                    room.save()
+                    serializer = self.get_serializer(room)
+                    return Response(serializer.data, status=status.HTTP_200_OK)
+                else:
+                    return Response({"message": "Ya eres un participante en esta sala."}, status=status.HTTP_400_BAD_REQUEST)
             else:
-                return Response({"message": "Ya eres un participante en esta sala."}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"message": "No puedes unirte a tu propia sala o como administrador."}, status=status.HTTP_403_FORBIDDEN)
         else:
-            return Response({"message": "No puedes unirte a tu propia sala o como administrador."}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"message": "Debes iniciar sesión para unirte a esta sala."}, status=status.HTTP_401_UNAUTHORIZED)
 
 
     @action(detail=True, methods=['delete'])
@@ -155,3 +164,4 @@ class LeaveRoomAPIView(APIView):
             return Response({"message": "Has dejado de ser participante de la sala."}, status=status.HTTP_200_OK)
         else:
             return Response({"detail": "No eres un participante de esta sala."}, status=status.HTTP_400_BAD_REQUEST)
+        
