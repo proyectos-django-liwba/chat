@@ -71,7 +71,7 @@ class RoomApiViewId(APIView):
 
         # Verificar si el usuario autenticado es el propietario de la sala o un administrador
         if request.user == room.user_id or request.user.role == 'Admin':
-            serializer = RoomSerializer(room, data=request.data)
+            serializer = RegisterRoomSerializer(room, data=request.data)
 
             if serializer.is_valid(raise_exception=True):
                 try:
