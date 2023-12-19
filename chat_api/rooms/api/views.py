@@ -10,6 +10,7 @@ from django.db.models.deletion import ProtectedError
 from django.db import IntegrityError
 from django.db import transaction
 from django.http import Http404
+from django.db.models import Q
 class RoomApiView(APIView):
     permission_classes = [IsAuthenticated]
     http_method_names = ['get', 'post']
@@ -126,7 +127,13 @@ class getRoomsFollow(APIView):
     
     def get(self, request):
         user = request.user
-        rooms_participated = Room.objects.filter(followers=user)
+        
+        # Filtra las salas en las que el usuario es seguidor
+        rooms_followed = Room.objects.filter(followers=user)
+        
+        # Excluye las salas que el usuario ha creado
+        rooms_participated = rooms_followed.exclude(user_id=user)
+        
         serializer = RoomSerializer(rooms_participated, many=True)
         return Response({"Rooms": serializer.data}, status=status.HTTP_200_OK)
 
