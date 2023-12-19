@@ -10,8 +10,9 @@ from django.db.models.deletion import ProtectedError
 from django.db import IntegrityError
 from django.db import transaction
 from django.http import Http404
-class RegisterView(APIView):
+class RoomApiView(APIView):
     permission_classes = [IsAuthenticated]
+    http_method_names = ['get', 'post']
 
     def post(self, request):
         serializer = RegisterRoomSerializer(data=request.data)
@@ -48,11 +49,19 @@ class RegisterView(APIView):
         except IntegrityError:
             return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": "Ocurrió un error al crear la sala."})
         
+        
+    #obtener todas las salas del usuario
+    
     def get(self, request):
-        serializer = RoomSerializer(data=request.data)
+        user = request.user
+        rooms = Room.objects.filter(user_id=user)
+        serializer = RoomSerializer(rooms, many=True)
+        return Response({"Rooms": serializer.data}, status=status.HTTP_200_OK)
         
 
-class RoomApiView(APIView):
+        
+
+class RoomApiViewId(APIView):
     permission_classes = [RoomPermission]
     http_method_names = ['put', 'patch', 'delete']
 
@@ -86,7 +95,43 @@ class RoomApiView(APIView):
         else:
             return Response({"message": "No tienes permisos para eliminar esta sala."}, status=status.HTTP_403_FORBIDDEN)
 
-class RoomParticipateApiView(APIView):
+
+        
+#obtener todas las salas activas      
+class getRooms(APIView):
+    permission_classes = [IsAuthenticated]
+    http_method_names = ['get']
+    
+    def get(self, request):
+        user = request.user
+        rooms = Room.objects.filter(is_active=True)
+        serializer = RoomPreviewSerializer(rooms, many=True)
+        return Response({"Rooms": serializer.data}, status=status.HTTP_200_OK)
+    
+#obtener una sala por id
+class getRoomById(APIView):
+    permission_classes = [IsAuthenticated]
+    http_method_names = ['get']
+    
+    def get(self, request, room_id):
+        user = request.user
+        room = Room.objects.get(id=room_id)
+        serializer = RoomSerializer(room)
+        return Response({"Room": serializer.data}, status=status.HTTP_200_OK)
+    
+#obtener todas las salas en las que participa el usuario
+class getRoomsFollow(APIView):
+    permission_classes = [IsAuthenticated]
+    http_method_names = ['get']
+    
+    def get(self, request):
+        user = request.user
+        rooms_participated = Room.objects.filter(followers=user)
+        serializer = RoomSerializer(rooms_participated, many=True)
+        return Response({"Rooms": serializer.data}, status=status.HTTP_200_OK)
+
+    
+class RoomFollowApiView(APIView):
     permission_classes = [IsAuthenticated]
     http_method_names = ['put', 'patch', 'delete', 'post']
 
@@ -110,42 +155,8 @@ class RoomParticipateApiView(APIView):
         else:
             return Response({"message": "No puedes unirte a tu propia sala o como administrador."}, status=status.HTTP_403_FORBIDDEN)
         
-#obtener todas las salas activas      
-class getRooms(APIView):
-    permission_classes = [IsAuthenticated]
-    http_method_names = ['get']
     
-    def get(self, request):
-        user = request.user
-        rooms = Room.objects.filter(is_active=True)
-        serializer = RoomPreviewSerializer(rooms, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    
-#obtener una sala por id
-class getRoomById(APIView):
-    permission_classes = [IsAuthenticated]
-    http_method_names = ['get']
-    
-    def get(self, request, room_id):
-        user = request.user
-        room = Room.objects.get(id=room_id)
-        serializer = RoomSerializer(room)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    
-#obtener todas las salas en las que participa el usuario
-class getRoomsParticipe(APIView):
-    permission_classes = [IsAuthenticated]
-    http_method_names = ['get']
-    
-    def get(self, request):
-        user = request.user
-        rooms_participated = Room.objects.filter(followers=user)
-        serializer = RoomSerializer(rooms_participated, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-class LeaveRoomAPIView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request, room_id):
+    def delete(self, request, room_id):
         room = get_object_or_404(Room, id=room_id)
         user = request.user
 
