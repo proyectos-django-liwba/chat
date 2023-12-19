@@ -35,6 +35,8 @@ sys.dont_write_bytecode = True
 # Application definition
 
 INSTALLED_APPS = [
+    "daphne",
+    'channels',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -44,7 +46,6 @@ INSTALLED_APPS = [
     'rest_framework',
     "corsheaders",
     'rest_framework_simplejwt',
-    'channels',
     'drf_yasg',
     'users',
     'rooms',
