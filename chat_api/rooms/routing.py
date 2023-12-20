@@ -5,7 +5,7 @@ from . import consumers
 websocket_urlpatterns = [
     re_path(
         r"ws/chat/$",
-        consumers.ProgressBarConsumer.as_asgi(),
+        consumers.chatConsumer.as_asgi(),
     ),
 
 ]
