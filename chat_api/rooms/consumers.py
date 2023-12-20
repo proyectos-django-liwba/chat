@@ -1,5 +1,5 @@
 import json
-from channels.generic.websocket import WebsocketConsumer, AsyncWebsocketConsumer
+
 from channels.db import database_sync_to_async
 # manejo de datos
 from .models import Room
@@ -7,8 +7,12 @@ from rooms.api.serializers import RoomSerializer
 # respuestas
 from rest_framework import status
 from rest_framework.response import Response
+import json
+from channels.generic.websocket import AsyncWebsocketConsumer
+from asgiref.sync import sync_to_async
 
-class chatConsumer(AsyncWebsocketConsumer):
+from .models import Room
+""" class chatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         await self.accept()
     
@@ -102,4 +106,48 @@ class chatConsumer(AsyncWebsocketConsumer):
         except Room.DoesNotExist:
             print(f"La sala con ID {self.room_id} no existe.")
         except Exception as e:
-            print(f"Error al obtener user_count: {e}")
+            print(f"Error al obtener user_count: {e}") """
+            
+
+# consumers.py
+
+
+
+class chatConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        # Se ejecuta cuando se establece la conexión.
+        await self.accept()
+
+        # Incrementa el contador de usuarios al conectarse.
+        await self.update_user_count(1)
+
+    async def disconnect(self, close_code):
+        # Se ejecuta cuando se cierra la conexión.
+        await self.update_user_count(-1)
+
+    async def receive(self, text_data):
+        try:
+            data = json.loads(text_data)
+            message = data['message']
+            # Hacer algo con el mensaje, si es necesario.
+        except KeyError:
+            # Manejar la falta de la clave 'message' en el diccionario.
+            message = None
+
+
+        # Hacer algo con el mensaje, si es necesario.
+
+    @sync_to_async
+    def update_user_count(self, increment):
+        # Actualiza el contador de usuarios en la base de datos.
+        room_id = self.scope['url_route']['kwargs']['room_id']
+        room = Room.objects.get(id=room_id)
+        room.user_count += increment
+        room.save()
+
+        # Envía la nueva cantidad de usuarios a todos los clientes conectados.
+        self.send_user_count(room.user_count)
+
+    async def send_user_count(self, user_count):
+        # Envía la cantidad de usuarios a todos los clientes conectados.
+        await self.send(text_data=json.dumps({'user_count': user_count}))
