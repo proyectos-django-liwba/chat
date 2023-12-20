@@ -119,24 +119,24 @@ class chatConsumer(AsyncWebsocketConsumer):
         await self.accept()
 
         # Incrementa el contador de usuarios al conectarse.
-        await self.update_user_count(1)
+        user_count = await self.update_user_count(1)
+        
+        await self.send_user_count(user_count)
 
     async def disconnect(self, close_code):
         # Se ejecuta cuando se cierra la conexión.
-        await self.update_user_count(-1)
+        user_count = await self.update_user_count(-1)
+        
+        await self.send_user_count(user_count)
+        
+        self.close()
 
     async def receive(self, text_data):
-        try:
-            data = json.loads(text_data)
-            message = data['message']
-            # Hacer algo con el mensaje, si es necesario.
-        except KeyError:
-            # Manejar la falta de la clave 'message' en el diccionario.
-            message = None
-
-
+    
+        data = json.loads(text_data)
+    
         # Hacer algo con el mensaje, si es necesario.
-
+        
     @sync_to_async
     def update_user_count(self, increment):
         # Actualiza el contador de usuarios en la base de datos.
@@ -145,8 +145,8 @@ class chatConsumer(AsyncWebsocketConsumer):
         room.user_count += increment
         room.save()
 
-        # Envía la nueva cantidad de usuarios a todos los clientes conectados.
-        self.send_user_count(room.user_count)
+        return room.user_count
+
 
     async def send_user_count(self, user_count):
         # Envía la cantidad de usuarios a todos los clientes conectados.
