@@ -12,7 +12,7 @@ class Room(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     user_id = models.ForeignKey(User, on_delete=SET_NULL, null=True)
     followers = models.ManyToManyField(User, related_name='rooms', blank=True)
-    user_count = models.PositiveIntegerField(default=1)
+    user_count = models.PositiveIntegerField(default=0)
 
     def __str__(self):
         return self.name
