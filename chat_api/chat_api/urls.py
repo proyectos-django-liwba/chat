@@ -7,6 +7,7 @@ from drf_yasg import openapi
 # router de las apps
 from users.api.router import urlpatterns as users_urls
 from rooms.api.router import urlpatterns as rooms_urls
+from comments.api.router import urlpatterns as commets_urls
 # libreria jwt
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
@@ -37,6 +38,7 @@ urlpatterns = [
     #auth - jwt - users
     path('api/', include('users.api.router')), 
     path('api/', include('rooms.api.router')),
+    path('api/', include('comments.api.router')),
     
     
 ]

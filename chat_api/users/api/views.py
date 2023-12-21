@@ -7,13 +7,11 @@ from users.api.serializers import (
   UserRegisterSerializer,
   UserSerializer, 
   UserUpdateSerializer,
-  UserChangePasswordSerializer,
   VerificarCuentaSerializer,
   UserUpdatePathSerializer,
   UserChangePasswordRecoverSerializer,
 )
-from django.utils.crypto import get_random_string
-from django.utils.timezone import now
+
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 import jwt
