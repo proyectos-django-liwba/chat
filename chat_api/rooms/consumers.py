@@ -4,6 +4,7 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from asgiref.sync import sync_to_async
 from .models import Room
 
+# consumer 2
 class chatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.room_id = self.scope['url_route']['kwargs']['room_id']
@@ -59,11 +60,54 @@ class chatConsumer(AsyncWebsocketConsumer):
 
         return room.user_count
 
-
     async def user_count(self, event):
         # Envía la cantidad de usuarios a todos los clientes conectados.
         await self.send(text_data=json.dumps({'user_count': event['user_count']}))
     
+    @property
+    def room_group_name(self):
+        # Construct the group name for the room
+        return f"chat_{self.room_id}"
+
+
+# consumer 2
+
+class UserCountConsumer(AsyncWebsocketConsumer):
+    
+    async def connect(self):
+        self.room_id = self.scope['url_route']['kwargs']['room_id']
+        
+        await self.accept()
+        
+        await self.channel_layer.group_add(
+            self.room_group_name,
+            self.channel_name
+        )
+
+    async def disconnect(self, close_code):
+        await self.channel_layer.group_discard(
+            self.room_group_name,
+            self.channel_name
+        )
+        
+        self.close()
+
+    async def receive(self, text_data):
+        pass
+    
+    async def send_user_count(self, user_count):
+        await self.channel_layer.group_send(
+            self.room_group_name,
+            {
+                'type': 'user_count',
+                'user_count': user_count
+            }
+        )
+        
+    async def user_count(self, event):
+        # Envía la cantidad de usuarios a todos los clientes conectados.
+        await self.send(text_data=json.dumps({'user_count': event['user_count']}))
+        
     @property
     def room_group_name(self):
         # Construct the group name for the room
