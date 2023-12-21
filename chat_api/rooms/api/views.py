@@ -87,6 +87,14 @@ class RoomApiViewId(APIView):
             if serializer.is_valid(raise_exception=True):
                 try:
                     serializer.save()
+                    channel_layer = get_channel_layer()
+                    group_name = "sala_group"  # Nombre del grupo WebSocket
+                    event = {
+                        "type": "recibir",
+                        "room": RegisterRoomSerializer(room).data,  # Reemplaza con los datos de tu sala
+                        "accion": "actualizar",  # Indica que se ha creado una sala nueva
+                    }
+                    async_to_sync(channel_layer.group_send)(group_name, event)
                     return Response({"message": "Sala actualizada correctamente"}, status=status.HTTP_200_OK)
                 except Exception as e:
                     return Response({"message": f"Error al actualizar la sala: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
