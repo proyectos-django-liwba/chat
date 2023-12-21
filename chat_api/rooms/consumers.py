@@ -17,10 +17,18 @@ class RoomConsumer(AsyncWebsocketConsumer):
         # Incrementa el contador de usuarios al conectarse.
         user_count = await self.update_user_count(1)
         
-        await self.send_user_count(user_count)
-        
+        # Almacena la instancia del WebSocket
+        self.websocket = self
+
         # Se ejecuta cuando se establece la conexión.
         await self.accept()
+        
+        # Después de aceptar la conexión, envía el mensaje
+        try:
+            await self.send_user_count(user_count)
+        except Exception as e:
+            print(f"Error sending user count: {e}")
+
 
     async def disconnect(self, close_code):
         await self.channel_layer.group_discard(
@@ -36,9 +44,7 @@ class RoomConsumer(AsyncWebsocketConsumer):
         self.close()
 
     async def receive(self, text_data):
-    
         data = json.loads(text_data)
-    
         # Hacer algo con el mensaje, si es necesario.
 
     async def send_user_count(self, user_count):
@@ -53,7 +59,7 @@ class RoomConsumer(AsyncWebsocketConsumer):
     @sync_to_async
     def update_user_count(self, increment):
         # Actualiza el contador de usuarios en la base de datos.
-        room_id = self.scope['url_route']['kwargs']['room_id']
+        room_id = self.room_id
         room = Room.objects.get(id=room_id)
         room.user_count += increment
         room.save()
@@ -61,9 +67,12 @@ class RoomConsumer(AsyncWebsocketConsumer):
         return room.user_count
 
     async def user_count(self, event):
-        # Envía la cantidad de usuarios a todos los clientes conectados.
-        await self.send(text_data=json.dumps({'user_count': event['user_count']}))
-    
+        try:
+            await self.send(text_data=json.dumps({'user_count': event['user_count']}))
+        except Exception as e:
+            print(f"Error sending user_count: {e}")
+
+
     @property
     def room_group_name(self):
         # Construct the group name for the room
