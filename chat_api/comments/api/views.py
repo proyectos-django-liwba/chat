@@ -15,16 +15,21 @@ class CommentListAPIView(APIView):
         return Response({"Rooms": serializer.data}, status=status.HTTP_200_OK)
 
     def post(self, request):
+        # Accede al usuario autenticado a través del token
+        user = request.user
+
+        # Agrega el usuario a los datos del comentario antes de la validación
+        data = request.data.copy()
+        data['user_id'] = user.id
+
+        serializer = CommentSerializer(data=data)
         
-        serializer = CommentSerializer(data=request.data)
         try:
             if serializer.is_valid(raise_exception=True):
                 serializer.save()
                 return Response(status=status.HTTP_201_CREATED, data={"message": "Comentario creado correctamente"})
-            
             else:
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-            
         except IntegrityError:
             return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": "Ocurrió un error al crear el comentario."})
         
@@ -44,11 +49,17 @@ class CommentDetailAPIView(APIView):
 
     def put(self, request, pk):
         comment = self.get_object(pk)
-        serializer = CommentSerializer(comment, data=request.data)
+        user = request.user
+
+        # Agrega el usuario a los datos del comentario antes de la validación
+        data = request.data.copy()
+        data['user_id'] = user.id
+
+        serializer = CommentSerializer(comment, data=data)  # Pasa la instancia existente como primer argumento
         try:
             if serializer.is_valid(raise_exception=True):
                 serializer.save()
-                return Response(status=status.HTTP_201_CREATED, data={"message": "Comentario actualizado correctamente"})
+                return Response(data={"message": "Comentario actualizado correctamente"})
             else:
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except IntegrityError:
