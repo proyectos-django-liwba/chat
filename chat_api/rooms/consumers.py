@@ -121,3 +121,39 @@ class UserCountConsumer(AsyncWebsocketConsumer):
     def room_group_name(self):
         # Construct the group name for the room
         return f"chat_{self.room_id}"
+    
+
+class SalaConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        print("WebSocket conectado")
+        await self.channel_layer.group_add(
+            'sala_group',  # Nombre del grupo WebSocket
+            self.channel_name
+        )
+        await self.accept()
+
+    async def disconnect(self, close_code):
+        await self.channel_layer.group_discard(
+            'sala_group',  # Nombre del grupo WebSocket
+            self.channel_name
+        )
+
+    async def enviar_actualizacion_sala(self, event):
+        message = {
+            'type': 'actualizacion_sala',
+            'room': event['room'],
+            'accion': event['accion'],
+        }
+        await self.send(text_data=json.dumps(message))
+        
+    """ async def enviar_actualizacion_sala(self, event):
+        message = {
+            'type': 'actualizacion_sala',
+            'accion': event['accion'],
+        }
+        await self.send(text_data=json.dumps(message)) """
+
+    async def recibir(self, event):
+        print("Recibido un evento WebSocket")
+        if 'room' in event and 'accion' in event:
+            await self.enviar_actualizacion_sala(event)

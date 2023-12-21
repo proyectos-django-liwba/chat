@@ -12,5 +12,9 @@ rooms_websocket_urlpatterns = [
         r"ws/user_count/(?P<room_id>\w+)/$",
         consumers.UserCountConsumer.as_asgi(),
     ),
+    
+    re_path(
+        r'ws/salas/$', consumers.SalaConsumer.as_asgi(),
+    ),
 
 ]

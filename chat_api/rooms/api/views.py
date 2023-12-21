@@ -10,6 +10,8 @@ from django.db.models.deletion import ProtectedError
 from django.db import IntegrityError
 from django.db import transaction
 from django.http import Http404
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 from django.db.models import Q
 class RoomApiView(APIView):
     permission_classes = [IsAuthenticated]
@@ -42,6 +44,15 @@ class RoomApiView(APIView):
                         user_count=1,
                     )
                     room.followers.add(user)
+                    
+                    channel_layer = get_channel_layer()
+                    group_name = "sala_group"  # Nombre del grupo WebSocket
+                    event = {
+                        "type": "recibir",
+                        "room": RoomSerializer(room).data,  # Reemplaza con los datos de tu sala
+                        "accion": "crear",  # Indica que se ha creado una sala nueva
+                    }
+                    async_to_sync(channel_layer.group_send)(group_name, event)
 
                 return Response(status=status.HTTP_201_CREATED, data={"message": "Sala creada correctamente"})
             else:
