@@ -1,50 +1,41 @@
 import json
-from .models import Room
 from channels.generic.websocket import AsyncWebsocketConsumer
 from asgiref.sync import sync_to_async
-from .models import Room
+from comments.models import Comment
 
 
-# consumer 2
 class ChatConsumer(AsyncWebsocketConsumer):
+
     async def connect(self):
-        self.room_id = self.scope['url_route']['kwargs']['room_id']
-        
+        print("WebSocket conectado")
         await self.channel_layer.group_add(
-            self.room_group_name,
+            'comments_group',  # Nombre del grupo WebSocket
             self.channel_name
         )
-        
-        # Se ejecuta cuando se establece la conexión.
         await self.accept()
 
     async def disconnect(self, close_code):
         await self.channel_layer.group_discard(
-            self.room_group_name,
+            'comments_group',  # Nombre del grupo WebSocket
             self.channel_name
         )
 
+    async def enviar_actualizacion_sala(self, event):
+        message = {
+            'type': 'actualizacion_sala',
+            'comments': event['comments'],
+            'accion': event['accion'],
+        }
+        await self.send(text_data=json.dumps(message))
         
-        self.close()
+    """ async def enviar_actualizacion_sala(self, event):
+        message = {
+            'type': 'actualizacion_sala',
+            'accion': event['accion'],
+        }
+        await self.send(text_data=json.dumps(message)) """
 
-    async def receive(self, text_data):
-    
-        data = json.loads(text_data)
-    
-        # Hacer algo con el mensaje, si es necesario.
-
-    async def send_user_count(self, user_count):
-        await self.channel_layer.group_send(
-            self.room_group_name,
-            {
-                'type': 'user_count',
-                'user_count': user_count
-            }
-        )
-    
-    @property
-    def room_group_name(self):
-        # Construct the group name for the room
-        return f"chat_{self.room_id}"
-
-
+    async def recibir(self, event):
+        print("Recibido un evento WebSocket")
+        if 'comments' in event and 'accion' in event:
+            await self.enviar_actualizacion_sala(event)

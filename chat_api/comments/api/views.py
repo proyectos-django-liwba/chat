@@ -7,7 +7,8 @@ from django.http import Http404
 from comments.api.permissions import IsCommentCreatorOrReadOnly
 from rest_framework.permissions import IsAuthenticated
 from django.db import IntegrityError
-from django.utils.html import escape
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 class CommentListAPIView(APIView):
     permission_classes = [IsAuthenticated]
     def get(self, request):
@@ -28,6 +29,14 @@ class CommentListAPIView(APIView):
         try:
             if serializer.is_valid(raise_exception=True):
                 serializer.save()
+                channel_layer = get_channel_layer()
+                group_name = "comments_group"  # Nombre del grupo WebSocket
+                event = {
+                    "type": "recibir",
+                    "comments": True,
+                    "accion": "crear", 
+                }
+                async_to_sync(channel_layer.group_send)(group_name, event)
                 return Response(status=status.HTTP_201_CREATED, data={"message": "Comentario creado correctamente"})
             else:
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -66,6 +75,14 @@ class CommentDetailAPIView(APIView):
         try:
             if serializer.is_valid(raise_exception=True):
                 serializer.save()
+                channel_layer = get_channel_layer()
+                group_name = "comments_group"  # Nombre del grupo WebSocket
+                event = {
+                    "type": "recibir",
+                    "comments": True,
+                    "accion": "actualizar", 
+                }
+                async_to_sync(channel_layer.group_send)(group_name, event)
                 return Response(data={"message": "Comentario actualizado correctamente"})
             else:
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -77,6 +94,14 @@ class CommentDetailAPIView(APIView):
         comment = self.get_object(pk)
         try:
             comment.delete()
+            channel_layer = get_channel_layer()
+            group_name = "comments_group"  # Nombre del grupo WebSocket
+            event = {
+                "type": "recibir",
+                "comments": True,
+                "accion": "eliminar", 
+            }
+            async_to_sync(channel_layer.group_send)(group_name, event)
             return Response({"message": "El comentario se eliminó con éxito."}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"message": f"Error al eliminar el comentario: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
