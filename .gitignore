@@ -2,6 +2,8 @@
 .DS_Store
 Thumbs.db
 
+.vscode
+
 # Directorios generados por Python
 __pycache__/
 .env
