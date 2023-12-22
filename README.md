@@ -175,6 +175,23 @@ urlpatterns = [
   `pymysql.version_info = (1, 4, 6, 'final', 0)`
   `pymysql.install_as_MySQLdb()`
 
+## Permitir texto enriquesido
+```pip install django-ckeditor```
+
+`DATABASES = {`
+      `default': {`
+        `'ENGINE': 'django.db.backends.mysql',`
+        `'NAME': 'bd_chat',`
+        `'USER': 'root',`
+        `'PASSWORD': '',`
+        `'HOST': 'localhost',`
+        `'PORT': '3306',`
+        `'OPTIONS': {`
+            `'charset': 'utf8mb4',`
+        `},`
+   ` }`
+`}`
+
 - configuracion de email en settings.py
   `EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend' `
   `EMAIL_HOST = 'smtp.gmail.com'`
@@ -231,3 +248,5 @@ REQUIRED_FIELDS = ['username','first_name', 'last_name']
 ## Produccion 
 * generar archivo requirements.txt
 ```pip freeze > requirements.txt```
+
+

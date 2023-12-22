@@ -7,7 +7,8 @@ from django.http import Http404
 from comments.api.permissions import IsCommentCreatorOrReadOnly
 from rest_framework.permissions import IsAuthenticated
 from django.db import IntegrityError
-from django.utils.html import escape
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 class CommentListAPIView(APIView):
     permission_classes = [IsAuthenticated]
     def get(self, request):
@@ -28,6 +29,16 @@ class CommentListAPIView(APIView):
         try:
             if serializer.is_valid(raise_exception=True):
                 serializer.save()
+                room_id = data.get('room_id')
+                room_group_name = f"comments_{room_id}"
+                channel_layer = get_channel_layer()
+                group_name = room_group_name
+                event = {
+                    "type": "recibir",
+                    "comments": True,
+                    "action": "crear", 
+                }
+                async_to_sync(channel_layer.group_send)(group_name, event)
                 return Response(status=status.HTTP_201_CREATED, data={"message": "Comentario creado correctamente"})
             else:
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -66,6 +77,17 @@ class CommentDetailAPIView(APIView):
         try:
             if serializer.is_valid(raise_exception=True):
                 serializer.save()
+                room_id = data.get('room_id')
+                room_group_name = f"comments_{room_id}"
+                channel_layer = get_channel_layer()
+                group_name = room_group_name
+                event = {
+                    "type": "recibir",
+                    "comments": True,
+                    "action": "actualizar", 
+                }
+                async_to_sync(channel_layer.group_send)(group_name, event)
+                async_to_sync(channel_layer.group_send)(group_name, event)
                 return Response(data={"message": "Comentario actualizado correctamente"})
             else:
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -76,7 +98,20 @@ class CommentDetailAPIView(APIView):
     def delete(self, request, pk):
         comment = self.get_object(pk)
         try:
+            room_id = comment.room_id.id  # Ajusta esto según la relación en tu modelo Comment
+            print(room_id)
             comment.delete()
+            
+
+            room_group_name = f"comments_{room_id}"  # Ajusta esto según tu esquema de nombres
+            channel_layer = get_channel_layer()
+            group_name = room_group_name
+            event = {
+                "type": "recibir",
+                "comments": True,
+                "action": "eliminar",
+            }
+            async_to_sync(channel_layer.group_send)(room_group_name, event)
             return Response({"message": "El comentario se eliminó con éxito."}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"message": f"Error al eliminar el comentario: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
