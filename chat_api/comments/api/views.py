@@ -2,7 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from comments.models import Comment
-from .serializers import CommentSerializer
+from .serializers import CommentSerializer, CommentSerializerList
 from django.http import Http404
 from comments.api.permissions import IsCommentCreatorOrReadOnly
 from rest_framework.permissions import IsAuthenticated
@@ -52,7 +52,7 @@ class CommentDetailAPIView(APIView):
         comments = Comment.objects.filter(room_id=room_id)
 
         # Serializa los comentarios y los devuelve como respuesta
-        serializer = CommentSerializer(comments, many=True)
+        serializer = CommentSerializerList(comments, many=True)
         return Response({"Comments": serializer.data}, status=status.HTTP_200_OK)
 
     def put(self, request, pk):
