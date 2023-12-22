@@ -29,12 +29,14 @@ class CommentListAPIView(APIView):
         try:
             if serializer.is_valid(raise_exception=True):
                 serializer.save()
+                room_id = data.get('room_id')
+                room_group_name = f"comments_{room_id}"
                 channel_layer = get_channel_layer()
-                group_name = "comments_group"  # Nombre del grupo WebSocket
+                group_name = room_group_name
                 event = {
                     "type": "recibir",
                     "comments": True,
-                    "accion": "crear", 
+                    "action": "crear", 
                 }
                 async_to_sync(channel_layer.group_send)(group_name, event)
                 return Response(status=status.HTTP_201_CREATED, data={"message": "Comentario creado correctamente"})
@@ -75,13 +77,16 @@ class CommentDetailAPIView(APIView):
         try:
             if serializer.is_valid(raise_exception=True):
                 serializer.save()
+                room_id = data.get('room_id')
+                room_group_name = f"comments_{room_id}"
                 channel_layer = get_channel_layer()
-                group_name = "comments_group"  # Nombre del grupo WebSocket
+                group_name = room_group_name
                 event = {
                     "type": "recibir",
                     "comments": True,
-                    "accion": "actualizar", 
+                    "action": "actualizar", 
                 }
+                async_to_sync(channel_layer.group_send)(group_name, event)
                 async_to_sync(channel_layer.group_send)(group_name, event)
                 return Response(data={"message": "Comentario actualizado correctamente"})
             else:
@@ -93,15 +98,20 @@ class CommentDetailAPIView(APIView):
     def delete(self, request, pk):
         comment = self.get_object(pk)
         try:
+            room_id = comment.room_id.id  # Ajusta esto según la relación en tu modelo Comment
+            print(room_id)
             comment.delete()
+            
+
+            room_group_name = f"comments_{room_id}"  # Ajusta esto según tu esquema de nombres
             channel_layer = get_channel_layer()
-            group_name = "comments_group"  # Nombre del grupo WebSocket
+            group_name = room_group_name
             event = {
                 "type": "recibir",
                 "comments": True,
-                "accion": "eliminar", 
+                "action": "eliminar",
             }
-            async_to_sync(channel_layer.group_send)(group_name, event)
+            async_to_sync(channel_layer.group_send)(room_group_name, event)
             return Response({"message": "El comentario se eliminó con éxito."}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"message": f"Error al eliminar el comentario: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
