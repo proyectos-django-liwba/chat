@@ -22,7 +22,6 @@ class CommentListAPIView(APIView):
         # Agrega el usuario a los datos del comentario antes de la validación
         data = request.data.copy()
         data['user_id'] = user.id
-        data['content'] = escape(data['content'])
 
         serializer = CommentSerializer(data=data)
         
