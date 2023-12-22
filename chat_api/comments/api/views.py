@@ -9,6 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 from django.db import IntegrityError
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
+from rest_framework.pagination import PageNumberPagination
 class CommentListAPIView(APIView):
     permission_classes = [IsAuthenticated]
     def get(self, request):
@@ -48,6 +49,8 @@ class CommentListAPIView(APIView):
 
 class CommentDetailAPIView(APIView):
     permission_classes = [IsCommentCreatorOrReadOnly]
+    pagination_class = PageNumberPagination  # Utiliza la paginación por número de página
+    page_size = 2
     def get_object(self, pk):
         try:
             return Comment.objects.get(pk=pk)
@@ -58,12 +61,17 @@ class CommentDetailAPIView(APIView):
         # Obtén la sala específica
         room_id = pk
 
-        # Obtiene todos los comentarios asociados a la sala
-        comments = Comment.objects.filter(room_id=room_id)
+        # Obtiene todos los comentarios asociados a la sala con paginación
+        comments = Comment.objects.filter(room_id=room_id).order_by('-id')
 
-        # Serializa los comentarios y los devuelve como respuesta
-        serializer = CommentSerializerList(comments, many=True)
-        return Response({"Comments": serializer.data}, status=status.HTTP_200_OK)
+        # Pagina los comentarios
+        paginator = self.pagination_class()
+        paginated_comments = paginator.paginate_queryset(comments, request)
+
+        # Serializa los comentarios paginados y los devuelve como respuesta
+        serializer = CommentSerializerList(paginated_comments, many=True)
+        return paginator.get_paginated_response(serializer.data)
+
 
     def put(self, request, pk):
         comment = self.get_object(pk)
