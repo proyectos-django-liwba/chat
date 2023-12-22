@@ -7,6 +7,7 @@ from django.http import Http404
 from comments.api.permissions import IsCommentCreatorOrReadOnly
 from rest_framework.permissions import IsAuthenticated
 from django.db import IntegrityError
+from django.utils.html import escape
 class CommentListAPIView(APIView):
     permission_classes = [IsAuthenticated]
     def get(self, request):
@@ -21,6 +22,7 @@ class CommentListAPIView(APIView):
         # Agrega el usuario a los datos del comentario antes de la validación
         data = request.data.copy()
         data['user_id'] = user.id
+        data['content'] = escape(data['content'])
 
         serializer = CommentSerializer(data=data)
         
