@@ -44,10 +44,16 @@ class CommentDetailAPIView(APIView):
         except Comment.DoesNotExist:
             raise Http404
 
-    """ def get(self, request, pk):
-        comment = self.get_object(pk)
-        serializer = CommentSerializer(comment)
-        return Response(serializer.data) """
+    def get(self, request, pk):
+        # Obtén la sala específica
+        room_id = pk
+
+        # Obtiene todos los comentarios asociados a la sala
+        comments = Comment.objects.filter(room_id=room_id)
+
+        # Serializa los comentarios y los devuelve como respuesta
+        serializer = CommentSerializer(comments, many=True)
+        return Response({"Comments": serializer.data}, status=status.HTTP_200_OK)
 
     def put(self, request, pk):
         comment = self.get_object(pk)
