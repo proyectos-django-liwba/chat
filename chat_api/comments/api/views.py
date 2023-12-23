@@ -60,9 +60,8 @@ class CommentListAPIView(APIView):
 
 class CommentDetailAPIView(APIView):
     permission_classes = [IsCommentCreatorOrReadOnly]
-    pagination_class = PageNumberPagination
+    pagination_class = PageNumberPagination  # Utiliza la paginación por número de página
     page_size = 20
-
     def get_object(self, pk):
         try:
             return Comment.objects.get(pk=pk)
@@ -70,7 +69,10 @@ class CommentDetailAPIView(APIView):
             raise Http404
 
     def get(self, request, pk):
+        # Obtén la sala específica
         room_id = pk
+
+        # Obtiene todos los comentarios asociados a la sala con paginación
         comments = Comment.objects.filter(room_id=room_id).order_by('-id')
 
         # Pagina los comentarios
@@ -80,8 +82,7 @@ class CommentDetailAPIView(APIView):
         # Serializa los comentarios paginados y los devuelve como respuesta
         serializer = CommentSerializerList(paginated_comments, many=True)
 
-        # Devuelve la respuesta paginada
-        return paginator.get_paginated_response(serializer.data)
+        return Response({"Comments": serializer.data}, status=status.HTTP_200_OK)
 
 
     def put(self, request, pk):
