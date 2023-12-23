@@ -50,7 +50,7 @@ class CommentListAPIView(APIView):
 class CommentDetailAPIView(APIView):
     permission_classes = [IsCommentCreatorOrReadOnly]
     pagination_class = PageNumberPagination  # Utiliza la paginación por número de página
-    page_size = 2
+    page_size = 20
     def get_object(self, pk):
         try:
             return Comment.objects.get(pk=pk)
