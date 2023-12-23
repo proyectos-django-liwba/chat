@@ -26,7 +26,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def enviar_actualizacion_sala(self, event):
         message = {
             'type': 'actualizacion_sala',
-            'comment': event['comment'],
+            'Comment': event['Comment'],
             'action': event['action'],
         }
         await self.send(text_data=json.dumps(message))
@@ -40,7 +40,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     async def recibir(self, event):
         print("Recibido un evento WebSocket")
-        if 'comment' in event and 'action' in event:
+        if 'Comment' in event and 'action' in event:
             await self.enviar_actualizacion_sala(event)
             
             

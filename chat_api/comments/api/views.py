@@ -10,6 +10,9 @@ from django.db import IntegrityError
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from rest_framework.pagination import PageNumberPagination
+from rest_framework import serializers
+from users.api.serializers import UserSerializerUsername
+from users.models import User
 class CommentListAPIView(APIView):
     permission_classes = [IsAuthenticated]
     def get(self, request):
@@ -18,27 +21,35 @@ class CommentListAPIView(APIView):
         return Response({"Rooms": serializer.data}, status=status.HTTP_200_OK)
 
     def post(self, request):
-        # Accede al usuario autenticado a través del token
         user = request.user
-
-        # Agrega el usuario a los datos del comentario antes de la validación
         data = request.data.copy()
         data['user_id'] = user.id
-
         serializer = CommentSerializer(data=data)
-        
+
         try:
             if serializer.is_valid(raise_exception=True):
                 serializer.save()
+
+                user_instance = User.objects.get(pk=user.id)
+                user_info_serializer = UserSerializerUsername(user_instance)
+                user_info = user_info_serializer.data
+
+                # Combina la información del comentario y del usuario en un solo diccionario
+                event_data = {**serializer.data, "user": user_info}
+
                 room_id = data.get('room_id')
                 room_group_name = f"comments_{room_id}"
                 channel_layer = get_channel_layer()
                 group_name = room_group_name
+
                 event = {
                     "type": "recibir",
-                    "comment": serializer.data,
-                    "action": "create", 
+                    "Comment": event_data,
+                    "action": "create"
                 }
+
+
+                # Envía el evento a través del socket
                 async_to_sync(channel_layer.group_send)(group_name, event)
                 return Response(status=status.HTTP_201_CREATED, data={"message": "Comentario creado correctamente"})
             else:
@@ -92,7 +103,7 @@ class CommentDetailAPIView(APIView):
                 group_name = room_group_name
                 event = {
                     "type": "recibir",
-                    "comment": CommentSerializer(comment).data,
+                    "Comment": CommentSerializerList(comment).data,
                     "action": "update", 
                 }
                 async_to_sync(channel_layer.group_send)(group_name, event)
@@ -117,7 +128,7 @@ class CommentDetailAPIView(APIView):
             group_name = room_group_name
             event = {
                 "type": "recibir",
-                "comment": CommentSerializer(comment).data,
+                "Comment": CommentSerializerList(comment).data,
                 "action": "delete",
 
             }
