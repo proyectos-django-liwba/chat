@@ -2,7 +2,7 @@ import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 from asgiref.sync import sync_to_async
 from comments.models import Comment
-
+from comments.api.serializers import CommentSerializer
 
 class ChatConsumer(AsyncWebsocketConsumer):
 
@@ -26,7 +26,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def enviar_actualizacion_sala(self, event):
         message = {
             'type': 'actualizacion_sala',
-            'comments': event['comments'],
+            'comment': event['comment'],
             'action': event['action'],
         }
         await self.send(text_data=json.dumps(message))
@@ -40,7 +40,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     async def recibir(self, event):
         print("Recibido un evento WebSocket")
-        if 'comments' in event and 'action' in event:
+        if 'comment' in event and 'action' in event:
             await self.enviar_actualizacion_sala(event)
             
             

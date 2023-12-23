@@ -36,8 +36,8 @@ class CommentListAPIView(APIView):
                 group_name = room_group_name
                 event = {
                     "type": "recibir",
-                    "comments": True,
-                    "action": "crear", 
+                    "comment": serializer.data,
+                    "action": "create", 
                 }
                 async_to_sync(channel_layer.group_send)(group_name, event)
                 return Response(status=status.HTTP_201_CREATED, data={"message": "Comentario creado correctamente"})
@@ -70,7 +70,8 @@ class CommentDetailAPIView(APIView):
 
         # Serializa los comentarios paginados y los devuelve como respuesta
         serializer = CommentSerializerList(paginated_comments, many=True)
-        return paginator.get_paginated_response(serializer.data)
+
+        return Response({"Comments": serializer.data}, status=status.HTTP_200_OK)
 
 
     def put(self, request, pk):
@@ -91,8 +92,8 @@ class CommentDetailAPIView(APIView):
                 group_name = room_group_name
                 event = {
                     "type": "recibir",
-                    "comments": True,
-                    "action": "actualizar", 
+                    "comment": CommentSerializer(comment).data,
+                    "action": "update", 
                 }
                 async_to_sync(channel_layer.group_send)(group_name, event)
                 async_to_sync(channel_layer.group_send)(group_name, event)
@@ -116,8 +117,9 @@ class CommentDetailAPIView(APIView):
             group_name = room_group_name
             event = {
                 "type": "recibir",
-                "comments": True,
-                "action": "eliminar",
+                "comment": CommentSerializer(comment).data,
+                "action": "delete",
+
             }
             async_to_sync(channel_layer.group_send)(room_group_name, event)
             return Response({"message": "El comentario se eliminó con éxito."}, status=status.HTTP_200_OK)
