@@ -146,12 +146,6 @@ class SalaConsumer(AsyncWebsocketConsumer):
         }
         await self.send(text_data=json.dumps(message))
         
-    """ async def enviar_actualizacion_sala(self, event):
-        message = {
-            'type': 'actualizacion_sala',
-            'accion': event['accion'],
-        }
-        await self.send(text_data=json.dumps(message)) """
 
     async def recibir(self, event):
         print("Recibido un evento WebSocket")

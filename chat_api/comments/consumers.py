@@ -30,13 +30,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             'action': event['action'],
         }
         await self.send(text_data=json.dumps(message))
-        
-    """ async def enviar_actualizacion_sala(self, event):
-        message = {
-            'type': 'actualizacion_sala',
-            'action': event['action'],
-        }
-        await self.send(text_data=json.dumps(message)) """
+
 
     async def recibir(self, event):
         print("Recibido un evento WebSocket")

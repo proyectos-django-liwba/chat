@@ -75,12 +75,9 @@ class CommentDetailAPIView(APIView):
         # Obtiene todos los comentarios asociados a la sala con paginación
         comments = Comment.objects.filter(room_id=room_id).order_by('-id')
 
-        # Invierte el orden de los comentarios
-        reversed_comments = comments.reverse()
-
         # Pagina los comentarios
         paginator = self.pagination_class()
-        paginated_comments = paginator.paginate_queryset(reversed_comments, request)
+        paginated_comments = paginator.paginate_queryset(comments, request)
 
         # Serializa los comentarios paginados y los devuelve como respuesta
         serializer = CommentSerializerList(paginated_comments, many=True)
