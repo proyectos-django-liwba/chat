@@ -106,6 +106,15 @@ class RoomApiViewId(APIView):
 
         if request.user == room.user_id or request.user.role == 'Admin':
             try:
+                
+                channel_layer = get_channel_layer()
+                group_name = "sala_group"  # Nombre del grupo WebSocket
+                event = {
+                    "type": "recibir",
+                    "room": RegisterRoomSerializer(room).data,  # Reemplaza con los datos de tu sala
+                    "action": "delete",  # Indica que se ha creado una sala nueva
+                }
+                async_to_sync(channel_layer.group_send)(group_name, event)
                 room.delete()
                 return Response({"message": "La sala se eliminó con éxito."}, status=status.HTTP_200_OK)
             except ProtectedError:
