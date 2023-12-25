@@ -41,7 +41,7 @@ class RoomApiView(APIView):
                         description=serializer.validated_data['description'],
                         image=serializer.validated_data['image'],
                         is_active=True,
-                        user_count=1,
+                        user_count=0,
                     )
                     room.followers.add(user)
                     
