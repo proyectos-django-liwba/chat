@@ -50,7 +50,7 @@ class RoomApiView(APIView):
                     event = {
                         "type": "recibir",
                         "room": RoomSerializer(room).data,  # Reemplaza con los datos de tu sala
-                        "accion": "crear",  # Indica que se ha creado una sala nueva
+                        "action": "create",  # Indica que se ha creado una sala nueva
                     }
                     async_to_sync(channel_layer.group_send)(group_name, event)
 
@@ -92,7 +92,7 @@ class RoomApiViewId(APIView):
                     event = {
                         "type": "recibir",
                         "room": RegisterRoomSerializer(room).data,  # Reemplaza con los datos de tu sala
-                        "accion": "actualizar",  # Indica que se ha creado una sala nueva
+                        "action": "update",  # Indica que se ha creado una sala nueva
                     }
                     async_to_sync(channel_layer.group_send)(group_name, event)
                     return Response({"message": "Sala actualizada correctamente"}, status=status.HTTP_200_OK)
