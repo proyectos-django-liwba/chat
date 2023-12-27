@@ -6,7 +6,7 @@ from rooms.api.serializers import RoomInfoSerializer
 
 class NotificationSerializer(serializers.ModelSerializer):
     room = RoomInfoSerializer() 
-    user = UserSerializerUsername(many=True)
+    user = UserSerializerUsername()
     class Meta:
         model = Notification
         fields = ['id', 'description', 'created_at', 'room','user', 'users']

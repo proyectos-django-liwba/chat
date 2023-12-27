@@ -107,7 +107,6 @@ class CommentDetailAPIView(APIView):
                     "action": "update", 
                 }
                 async_to_sync(channel_layer.group_send)(group_name, event)
-                async_to_sync(channel_layer.group_send)(group_name, event)
                 return Response(data={"message": "Comentario actualizado correctamente"})
             else:
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

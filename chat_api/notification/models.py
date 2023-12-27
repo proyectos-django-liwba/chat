@@ -21,3 +21,4 @@ def create_and_save_notification(description, room, users, type):
     notification = Notification(description=description,type=type, room=room)
     notification.save()
     notification.users.set(users)
+    

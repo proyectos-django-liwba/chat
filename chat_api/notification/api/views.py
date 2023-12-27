@@ -6,8 +6,9 @@ from .serializers import NotificationSerializer
 from rooms.models import Room
 from users.models import User
 from django.shortcuts import get_object_or_404
-
+from rest_framework.permissions import IsAuthenticated
 class NotificationListAPIView(APIView):
+    permission_classes = [IsAuthenticated]
     def get(self, request, pk, format=None):  # Cambia room_id a pk
         room = get_object_or_404(Room, id=pk)  # Usa pk como el ID de la habitación
 
@@ -16,8 +17,9 @@ class NotificationListAPIView(APIView):
 
         return Response(serializer.data)
 
-    def delete(self, request, notification_id, user_id):
-        notification = get_object_or_404(Notification, id=notification_id)
+    def delete(self, request, pk, format=None):
+        user_id = request.user.id  # El ID del usuario se obtiene directamente desde la solicitud debido a IsAuthenticated
+        notification = get_object_or_404(Notification, id=pk)
 
         # Verificar si el usuario está vinculado a la notificación
         if notification.users.filter(id=user_id).exists():

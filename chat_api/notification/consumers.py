@@ -1,7 +1,7 @@
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 
-class ChatConsumer(AsyncWebsocketConsumer):
+class NotificationConsumer(AsyncWebsocketConsumer):
 
     async def connect(self):
         print("WebSocket conectado")
@@ -23,7 +23,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def enviar_actualizacion_sala(self, event):
         message = {
             'type': 'actualizacion_sala',
-            'Comment': event['Comment'],
+            'Notification': event['Notification'],
             'action': event['action'],
         }
         await self.send(text_data=json.dumps(message))
@@ -31,11 +31,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     async def recibir(self, event):
         print("Recibido un evento WebSocket")
-        if 'Comment' in event and 'action' in event:
+        if 'Notification' in event and 'action' in event:
             await self.enviar_actualizacion_sala(event)
             
             
     @property
     def room_group_name(self):
         # Construct the group name for the room
-        return f"comments_{self.room_id}"
+        return f"notifications{self.room_id}"
