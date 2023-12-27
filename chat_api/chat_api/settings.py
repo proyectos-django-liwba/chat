@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'users',
     'rooms',
     'comments',
+    'notification',
 ]
 
 MIDDLEWARE = [

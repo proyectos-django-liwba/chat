@@ -20,3 +20,9 @@ class RoomPreviewSerializer(serializers.ModelSerializer):
     class Meta:
         model = Room
         fields = ['id', 'name', 'description', 'image', 'user_count']
+        
+        
+class RoomInfoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Room
+        fields = ['id', 'name']

@@ -13,6 +13,7 @@ from django.http import Http404
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from django.db.models import Q
+from notification.models import Notification, create_and_save_notification
 class RoomApiView(APIView):
     permission_classes = [IsAuthenticated]
     http_method_names = ['get', 'post']
@@ -87,6 +88,9 @@ class RoomApiViewId(APIView):
             if serializer.is_valid(raise_exception=True):
                 try:
                     serializer.save()
+                    description = f"La sala '{room.name}' ha sido editada por {request.user.username}."
+                    create_and_save_notification(description, room, room.followers.all(), 1)
+
                     channel_layer = get_channel_layer()
                     group_name = "sala_group"  # Nombre del grupo WebSocket
                     event = {
@@ -182,7 +186,6 @@ class RoomFollowApiView(APIView):
             if not room.followers.filter(id=request.user.id).exists():
                 room.user_count += 1
                 # Agregar al usuario como participante
-                room.followers.add(request.user)
                 room.save()
                 return Response({"message": "Te has unido a la sala correctamente."}, status=status.HTTP_200_OK)
             else:
@@ -199,6 +202,9 @@ class RoomFollowApiView(APIView):
         if room.followers.filter(id=user.id).exists():
             # Remover al usuario de la sala
             room.user_count -= 1
+            description = f"La sala '{room.name}' ha sido eliminada por {request.user.username}."
+            create_and_save_notification(description, room, room.followers.all(), 2)
+
             room.followers.remove(user)
             room.save()
             serializer = RoomSerializer(room)

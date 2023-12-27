@@ -8,6 +8,7 @@ from drf_yasg import openapi
 from users.api.router import urlpatterns as users_urls
 from rooms.api.router import urlpatterns as rooms_urls
 from comments.api.router import urlpatterns as commets_urls
+from notification.api.router import urlpatterns as notification_urls
 # libreria jwt
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
@@ -39,6 +40,6 @@ urlpatterns = [
     path('api/', include('users.api.router')), 
     path('api/', include('rooms.api.router')),
     path('api/', include('comments.api.router')),
-    
+    path('api/', include('notification.api.router')),
     
 ]
