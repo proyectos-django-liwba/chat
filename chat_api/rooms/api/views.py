@@ -188,8 +188,8 @@ class RoomFollowApiView(APIView):
         if request.user != room.user_id and request.user.role != 'Admin':
             # Verificar si el usuario ya es un participante en la sala
             if not room.followers.filter(id=request.user.id).exists():
-                room.user_count += 1
                 # Agregar al usuario como participante
+                room.followers.add(request.user)
                 room.save()
                 return Response({"message": "Te has unido a la sala correctamente."}, status=status.HTTP_200_OK)
             else:
