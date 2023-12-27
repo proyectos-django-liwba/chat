@@ -121,6 +121,8 @@ class RoomApiViewId(APIView):
                     "action": "delete",  # Indica que se ha creado una sala nueva
                 }
                 async_to_sync(channel_layer.group_send)(group_name, event)
+                description = f"La sala '{room.name}' ha sido editada por {request.user.username}."
+                create_and_save_notification(description, room, room.followers.all(), 2, request.user)
                 room.delete()
                 return Response({"message": "La sala se eliminó con éxito."}, status=status.HTTP_200_OK)
             except ProtectedError:
@@ -204,8 +206,6 @@ class RoomFollowApiView(APIView):
         if room.followers.filter(id=user.id).exists():
             # Remover al usuario de la sala
             room.user_count -= 1
-            description = f"La sala '{room.name}' ha sido eliminada por {request.user.username}."
-            create_and_save_notification(description, room,user, room.followers.all(), 2)
 
             room.followers.remove(user)
             room.save()
