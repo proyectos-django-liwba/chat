@@ -9,19 +9,25 @@ from rest_framework.permissions import IsAuthenticated
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from django.contrib.auth.models import User
-
+from .permissions import IsFollowerOfRoom 
 class NotificationListAPIView(APIView):
-    permission_classes = [IsAuthenticated]
-    def get(self, request, pk, format=None):  # Cambia room_id a pk
-        room = get_object_or_404(Room, id=pk)  # Usa pk como el ID de la habitación
+    permission_classes = [IsFollowerOfRoom]
+    
+    def get(self, request, format=None):
+        user = request.user
 
-        notifications = Notification.objects.filter(room=room)
+        # Obtén todas las notificaciones para las salas seguidas por el usuario
+        notifications = Notification.objects.filter(room__followers=user)
+        
         serializer = NotificationSerializer(notifications, many=True)
-
         return Response(serializer.data)
 
+
+
+class NotificationDeleteApiView(APIView):
     def delete(self, request, pk, format=None):
-        user_id = request.user.id  # El ID del usuario se obtiene directamente desde la solicitud debido a IsAuthenticated
+        permission_classes = [IsAuthenticated]
+        user_id = request.user.id
         notification = get_object_or_404(Notification, id=pk)
 
         # Verificar si el usuario está vinculado a la notificación
