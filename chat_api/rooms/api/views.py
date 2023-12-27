@@ -13,7 +13,8 @@ from django.http import Http404
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from django.db.models import Q
-from notification.models import Notification, create_and_save_notification
+from notification.api.views import create_and_save_notification
+from notification.models import Notification
 class RoomApiView(APIView):
     permission_classes = [IsAuthenticated]
     http_method_names = ['get', 'post']
@@ -80,7 +81,7 @@ class RoomApiViewId(APIView):
 
     def put(self, request, room_id):
         room = get_object_or_404(Room, id=room_id)
-
+        
         # Verificar si el usuario autenticado es el propietario de la sala o un administrador
         if request.user == room.user_id or request.user.role == 'Admin':
             serializer = RegisterRoomSerializer(room, data=request.data)
@@ -89,7 +90,8 @@ class RoomApiViewId(APIView):
                 try:
                     serializer.save()
                     description = f"La sala '{room.name}' ha sido editada por {request.user.username}."
-                    create_and_save_notification(description, room, room.followers.all(), 1)
+                    create_and_save_notification(description, room, room.followers.all(), 1, request.user)
+
 
                     channel_layer = get_channel_layer()
                     group_name = "sala_group"  # Nombre del grupo WebSocket
@@ -203,7 +205,7 @@ class RoomFollowApiView(APIView):
             # Remover al usuario de la sala
             room.user_count -= 1
             description = f"La sala '{room.name}' ha sido eliminada por {request.user.username}."
-            create_and_save_notification(description, room, room.followers.all(), 2)
+            create_and_save_notification(description, room,user, room.followers.all(), 2)
 
             room.followers.remove(user)
             room.save()

@@ -16,9 +16,5 @@ class Notification(models.Model):
     users = models.ManyToManyField(User, related_name='notifications', blank=True)
     type = models.IntegerField(choices=CHOICES,default=0)
     
-
-def create_and_save_notification(description, room, users, type):
-    notification = Notification(description=description,type=type, room=room)
-    notification.save()
-    notification.users.set(users)
+    
     

@@ -4,9 +4,12 @@ from rest_framework import status
 from notification.models import Notification
 from .serializers import NotificationSerializer
 from rooms.models import Room
-from users.models import User
 from django.shortcuts import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
+from django.contrib.auth.models import User
+
 class NotificationListAPIView(APIView):
     permission_classes = [IsAuthenticated]
     def get(self, request, pk, format=None):  # Cambia room_id a pk
@@ -39,3 +42,18 @@ class NotificationListAPIView(APIView):
                             status=status.HTTP_400_BAD_REQUEST)
 
 
+def create_and_save_notification(description, room, users, type, user):
+    user_id = user.id
+    notification = Notification(description=description, type=type, room=room, user_id=user_id)
+    notification.save()
+    notification.users.set(users)
+    
+    channel_layer = get_channel_layer()
+    group_name = "notification_group"
+    event = {
+        "type": "recibir",
+        "Notification": NotificationSerializer(notification).data,
+        "action": "update",
+
+    }
+    async_to_sync(channel_layer.group_send)(group_name, event)
