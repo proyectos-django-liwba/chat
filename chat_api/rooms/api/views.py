@@ -193,7 +193,7 @@ class RoomFollowApiView(APIView):
                 room.save()
                 return Response({"message": "Te has unido a la sala correctamente."}, status=status.HTTP_200_OK)
             else:
-                return Response({"message": "Ya eres un participante en esta sala."}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"error": "Ya eres un participante en esta sala."}, status=status.HTTP_400_BAD_REQUEST)
         else:
             return Response({"message": "No puedes unirte a tu propia sala o como administrador."}, status=status.HTTP_403_FORBIDDEN)
         
