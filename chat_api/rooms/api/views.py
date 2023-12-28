@@ -68,7 +68,7 @@ class RoomApiView(APIView):
     
     def get(self, request):
         user = request.user
-        rooms = Room.objects.filter(user_id=user)
+        rooms = Room.objects.filter(user_id=user, is_active=True)
         serializer = RoomSerializer(rooms, many=True)
         return Response({"Rooms": serializer.data}, status=status.HTTP_200_OK)
         
@@ -112,7 +112,7 @@ class RoomApiViewId(APIView):
 
         if request.user == room.user_id or request.user.role == 'Admin':
             try:
-                if room.user_count == 0:
+                if room.user_count != 0:
                     return Response({"error": "No puedes eliminar la sala porque tiene participantes."}, status=status.HTTP_400_BAD_REQUEST)
                 else:
                     
@@ -126,7 +126,9 @@ class RoomApiViewId(APIView):
                     async_to_sync(channel_layer.group_send)(group_name, event)
                     description = f"La sala '{room.name}' ha sido editada por {request.user.username}."
                     create_and_save_notification(description, room, room.followers.all(), 2, request.user)
-                    room.delete()
+                    
+                    room.is_active = False
+                    room.save()
                     return Response({"message": "La sala se eliminó con éxito."}, status=status.HTTP_200_OK)
             except ProtectedError:
                 return Response({"message": "No puedes eliminar la sala porque tiene participantes."}, status=status.HTTP_400_BAD_REQUEST)
@@ -155,7 +157,7 @@ class getRoomById(APIView):
     
     def get(self, request, room_id):
         user = request.user
-        room = Room.objects.get(id=room_id)
+        room = Room.objects.get(id=room_id, is_active=True)
         serializer = RoomSerializer(room)
         return Response({"Room": serializer.data}, status=status.HTTP_200_OK)
     
@@ -168,7 +170,7 @@ class getRoomsFollow(APIView):
         user = request.user
         
         # Filtra las salas en las que el usuario es seguidor
-        rooms_followed = Room.objects.filter(followers=user)
+        rooms_followed = Room.objects.filter(followers=user, is_active=True)
         
         # Excluye las salas que el usuario ha creado
         rooms_participated = rooms_followed.exclude(user_id=user)
