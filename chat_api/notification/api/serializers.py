@@ -9,5 +9,5 @@ class NotificationSerializer(serializers.ModelSerializer):
     user = UserSerializerUsername()
     class Meta:
         model = Notification
-        fields = ['id', 'description', 'created_at', 'room','user', 'users']
+        fields = ['id', 'description', 'created_at', 'room','user', 'users', 'type']
 
