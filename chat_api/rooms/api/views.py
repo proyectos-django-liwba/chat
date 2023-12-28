@@ -124,7 +124,7 @@ class RoomApiViewId(APIView):
                         "action": "delete",  # Indica que se ha creado una sala nueva
                     }
                     async_to_sync(channel_layer.group_send)(group_name, event)
-                    description = f"La sala '{room.name}' ha sido editada por {request.user.username}."
+                    description = f"La sala '{room.name}' ha sido eliminada por {request.user.username}."
                     create_and_save_notification(description, room, room.followers.all(), 2, request.user)
                     
                     room.is_active = False
@@ -158,8 +158,14 @@ class getRoomById(APIView):
     def get(self, request, room_id):
         user = request.user
         room = Room.objects.get(id=room_id, is_active=True)
+        is_follow = room.followers.filter(id=user.id).exists()
+
+        # Agregar la información de seguimiento al objeto serializado
         serializer = RoomSerializer(room)
-        return Response({"Room": serializer.data}, status=status.HTTP_200_OK)
+        serialized_data = serializer.data
+        serialized_data['IsFollow'] = is_follow
+
+        return Response({"Room": serialized_data}, status=status.HTTP_200_OK)
     
 #obtener todas las salas en las que participa el usuario
 class getRoomsFollow(APIView):
