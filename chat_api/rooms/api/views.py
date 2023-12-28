@@ -112,19 +112,22 @@ class RoomApiViewId(APIView):
 
         if request.user == room.user_id or request.user.role == 'Admin':
             try:
-                
-                channel_layer = get_channel_layer()
-                group_name = "sala_group"  # Nombre del grupo WebSocket
-                event = {
-                    "type": "recibir",
-                    "room": RegisterRoomSerializer(room).data,  # Reemplaza con los datos de tu sala
-                    "action": "delete",  # Indica que se ha creado una sala nueva
-                }
-                async_to_sync(channel_layer.group_send)(group_name, event)
-                description = f"La sala '{room.name}' ha sido editada por {request.user.username}."
-                create_and_save_notification(description, room, room.followers.all(), 2, request.user)
-                room.delete()
-                return Response({"message": "La sala se eliminó con éxito."}, status=status.HTTP_200_OK)
+                if room.user_count == 0:
+                    return Response({"message": "No puedes eliminar la sala porque tiene participantes."}, status=status.HTTP_400_BAD_REQUEST)
+                else:
+                    
+                    channel_layer = get_channel_layer()
+                    group_name = "sala_group"  # Nombre del grupo WebSocket
+                    event = {
+                        "type": "recibir",
+                        "room": RegisterRoomSerializer(room).data,  # Reemplaza con los datos de tu sala
+                        "action": "delete",  # Indica que se ha creado una sala nueva
+                    }
+                    async_to_sync(channel_layer.group_send)(group_name, event)
+                    description = f"La sala '{room.name}' ha sido editada por {request.user.username}."
+                    create_and_save_notification(description, room, room.followers.all(), 2, request.user)
+                    room.delete()
+                    return Response({"message": "La sala se eliminó con éxito."}, status=status.HTTP_200_OK)
             except ProtectedError:
                 return Response({"message": "No puedes eliminar la sala porque tiene participantes."}, status=status.HTTP_400_BAD_REQUEST)
             except Exception as e:
