@@ -48,7 +48,7 @@ class NotificationDeleteApiView(APIView):
                             status=status.HTTP_400_BAD_REQUEST)
 
 
-def create_and_save_notification(description, room, users, type, user):
+def create_and_save_notification(description, room, users, type, user,action):
     user_id = user.id
     notification = Notification(description=description, type=type, room=room, user_id=user_id)
     notification.save()
@@ -59,7 +59,7 @@ def create_and_save_notification(description, room, users, type, user):
     event = {
         "type": "recibir",
         "Notification": NotificationSerializer(notification).data,
-        "action": "update",
+        "action": action,
 
     }
     async_to_sync(channel_layer.group_send)(group_name, event)

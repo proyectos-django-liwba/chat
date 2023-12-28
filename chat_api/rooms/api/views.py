@@ -33,7 +33,7 @@ class RoomApiView(APIView):
                         return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": "Ya existe una sala con este nombre."})
 
                     # Verificar si el usuario tiene más de 3 salas
-                    if Room.objects.filter(user_id=user, is_active=False).count() >= 3:
+                    if Room.objects.filter(user_id=user, is_active=True).count() >= 3:
                         return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": "El usuario ya tiene el máximo permitido de salas."})
 
                     # Crear la sala y añadir al usuario como seguidor
@@ -90,7 +90,7 @@ class RoomApiViewId(APIView):
                 try:
                     serializer.save()
                     description = f"La sala '{room.name}' ha sido editada por {request.user.username}."
-                    create_and_save_notification(description, room, room.followers.all(), 1, request.user)
+                    create_and_save_notification(description, room, room.followers.all(), 1, request.user, "update")
 
 
                     channel_layer = get_channel_layer()
@@ -125,7 +125,7 @@ class RoomApiViewId(APIView):
                     }
                     async_to_sync(channel_layer.group_send)(group_name, event)
                     description = f"La sala '{room.name}' ha sido eliminada por {request.user.username}."
-                    create_and_save_notification(description, room, room.followers.all(), 2, request.user)
+                    create_and_save_notification(description, room, room.followers.all(), 2, request.user, "delete")
                     
                     room.is_active = False
                     room.save()
