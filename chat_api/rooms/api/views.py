@@ -113,7 +113,7 @@ class RoomApiViewId(APIView):
         if request.user == room.user_id or request.user.role == 'Admin':
             try:
                 if room.user_count == 0:
-                    return Response({"message": "No puedes eliminar la sala porque tiene participantes."}, status=status.HTTP_400_BAD_REQUEST)
+                    return Response({"error": "No puedes eliminar la sala porque tiene participantes."}, status=status.HTTP_400_BAD_REQUEST)
                 else:
                     
                     channel_layer = get_channel_layer()
