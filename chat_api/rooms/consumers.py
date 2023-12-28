@@ -3,10 +3,31 @@ from .models import Room
 from channels.generic.websocket import AsyncWebsocketConsumer
 from asgiref.sync import sync_to_async
 from .models import Room
-
+from rest_framework_simplejwt.tokens import AccessToken
+from rest_framework_simplejwt.exceptions import InvalidToken
 # consumer 2
 class RoomConsumer(AsyncWebsocketConsumer):
     async def connect(self):
+        query_string = self.scope['query_string'].decode('utf-8')
+
+        # Verificar si el token está presente en la cadena de consulta
+        if '=' not in query_string:
+            # Manejar el caso en que el token no está presente o la cadena de consulta no tiene el formato esperado
+            error_message = "Token no válido en la cadena de consulta."
+            await self.send(text_data=json.dumps({"error": error_message}))
+            await self.close()
+            return
+
+        token = query_string.split('=')[1]
+
+
+        # Verificar si el token es válido
+        user = self.authenticate_user_with_token(token)
+
+        if user is None:
+            # Manejar el caso en que la autenticación falla
+            await self.close()
+            return
         self.room_id = self.scope['url_route']['kwargs']['room_id']
         
         await self.channel_layer.group_add(
@@ -77,6 +98,17 @@ class RoomConsumer(AsyncWebsocketConsumer):
     def room_group_name(self):
         # Construct the group name for the room
         return f"chat_{self.room_id}"
+    
+    def authenticate_user_with_token(self, token):
+        try:
+            # Decodificar el token con rest_framework_simplejwt
+            access_token = AccessToken(token)
+            user = access_token.payload.get('user_id')
+            return user
+        except InvalidToken:
+            # Manejar el caso en que la autenticación falla
+            return None
+
 
 
 # consumer 2
@@ -84,6 +116,27 @@ class RoomConsumer(AsyncWebsocketConsumer):
 class UserCountConsumer(AsyncWebsocketConsumer):
     
     async def connect(self):
+        query_string = self.scope['query_string'].decode('utf-8')
+
+        # Verificar si el token está presente en la cadena de consulta
+        if '=' not in query_string:
+            # Manejar el caso en que el token no está presente o la cadena de consulta no tiene el formato esperado
+            error_message = "Token no válido en la cadena de consulta."
+            await self.send(text_data=json.dumps({"error": error_message}))
+            await self.close()
+            return
+
+        token = query_string.split('=')[1]
+
+
+        # Verificar si el token es válido
+        user = self.authenticate_user_with_token(token)
+
+        if user is None:
+            # Manejar el caso en que la autenticación falla
+            await self.close()
+            return
+        
         self.room_id = self.scope['url_route']['kwargs']['room_id']
         
         await self.accept()
@@ -122,9 +175,48 @@ class UserCountConsumer(AsyncWebsocketConsumer):
         # Construct the group name for the room
         return f"chat_{self.room_id}"
     
+    def authenticate_user_with_token(self, token):
+        try:
+            # Decodificar el token con rest_framework_simplejwt
+            access_token = AccessToken(token)
+            user = access_token.payload.get('user_id')
+            return user
+        except InvalidToken:
+            # Manejar el caso en que la autenticación falla
+            return None
+
+    
 
 class SalaConsumer(AsyncWebsocketConsumer):
+
     async def connect(self):
+        query_string = self.scope['query_string'].decode('utf-8')
+
+        # Verificar si el token está presente en la cadena de consulta
+        if '=' not in query_string:
+            # Manejar el caso en que el token no está presente o la cadena de consulta no tiene el formato esperado
+            error_message = "Token no válido en la cadena de consulta."
+
+            try:
+                await self.send(text_data=json.dumps({"error": error_message}))
+            except Exception as e:
+                print(f"Error al enviar mensaje: {e}")
+
+            await self.close(code=4000)  # Utiliza un código de cierre personalizado, por ejemplo, 4000
+            return
+
+        token = query_string.split('=')[1]
+
+
+        # Verificar si el token es válido
+        user = self.authenticate_user_with_token(token)
+
+        if user is None:
+            # Manejar el caso en que la autenticación falla
+            await self.close()
+            return
+        
+        
         print("WebSocket conectado")
         await self.channel_layer.group_add(
             'sala_group',  # Nombre del grupo WebSocket
@@ -151,3 +243,13 @@ class SalaConsumer(AsyncWebsocketConsumer):
         print("Recibido un evento WebSocket")
         if 'room' in event and 'action' in event:
             await self.enviar_actualizacion_sala(event)
+            
+    def authenticate_user_with_token(self, token):
+        try:
+            # Decodificar el token con rest_framework_simplejwt
+            access_token = AccessToken(token)
+            user = access_token.payload.get('user_id')
+            return user
+        except InvalidToken:
+            # Manejar el caso en que la autenticación falla
+            return None
