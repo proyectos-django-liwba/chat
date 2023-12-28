@@ -216,7 +216,6 @@ class RoomFollowApiView(APIView):
         # Verificar si el usuario es un participante en la sala
         if room.followers.filter(id=user.id).exists():
             # Remover al usuario de la sala
-            room.user_count -= 1
 
             room.followers.remove(user)
             room.save()
