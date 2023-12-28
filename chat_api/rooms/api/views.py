@@ -45,7 +45,7 @@ class RoomApiView(APIView):
                         is_active=True,
                         user_count=0,
                     )
-                    room.followers.add(user)
+
                     
                     channel_layer = get_channel_layer()
                     group_name = "sala_group"  # Nombre del grupo WebSocket
