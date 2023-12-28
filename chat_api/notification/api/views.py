@@ -16,8 +16,8 @@ class NotificationListAPIView(APIView):
     def get(self, request, format=None):
         user = request.user
 
-        # Obtén todas las notificaciones para las salas seguidas por el usuario
-        notifications = Notification.objects.filter(room__followers=user)
+        # Obtén todas las notificaciones para el usuario actual
+        notifications = Notification.objects.filter(users=user)
         
         serializer = NotificationSerializer(notifications, many=True)
         return Response({"Notifications": serializer.data})
