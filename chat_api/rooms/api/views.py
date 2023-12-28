@@ -33,7 +33,7 @@ class RoomApiView(APIView):
                         return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": "Ya existe una sala con este nombre."})
 
                     # Verificar si el usuario tiene más de 3 salas
-                    if Room.objects.filter(user_id=user).count() >= 3:
+                    if Room.objects.filter(user_id=user, is_active=False).count() >= 3:
                         return Response(status=status.HTTP_400_BAD_REQUEST, data={"error": "El usuario ya tiene el máximo permitido de salas."})
 
                     # Crear la sala y añadir al usuario como seguidor
