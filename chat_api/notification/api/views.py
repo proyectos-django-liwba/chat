@@ -40,7 +40,7 @@ class NotificationDeleteApiView(APIView):
                 # No hay más usuarios, eliminar la notificación
                 notification.delete()
 
-            return Response({"message": "Usuario desvinculado correctamente."},
+            return Response({"message": "Notificacion eliminada correctamente."},
                             status=status.HTTP_200_OK)
         else:
             # El usuario no estaba vinculado a la notificación
