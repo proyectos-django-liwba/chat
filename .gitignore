@@ -2,10 +2,19 @@
 .DS_Store
 Thumbs.db
 
+# IDEs
 .vscode
+/vscode
 
 # Directorios generados por Python
+__pycach.vscode
+*.pyc
+*.pyo
 __pycache__/
+**/__pycache__/**
+**/**/__pycache__/**e__/
+
+# entorno virtual
 .env
 
 # Archivos de logs
@@ -16,9 +25,3 @@ db.sqlite3
 
 # Carpeta de archivos temporales
 /tmp/
-
-# Ignorar archivos pycache en cualquier nivel dentro de /chat_api/
-/chat_api/**/__pycache__/
-
-# Ignorar archivos pyc en cualquier nivel dentro de /chat_api/
-/chat_api/**/*.pyc
